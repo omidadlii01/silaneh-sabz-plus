@@ -35,9 +35,9 @@ export const Header: React.FC = () => {
           ) : (
             <div
               onClick={() => navigateTo('home')}
-              className="flex items-center gap-2 cursor-pointer group py-1"
+              className="flex items-center gap-2 cursor-pointer group py-1 bg-white rounded-xl px-2 py-1"
             >
-              <SeylanehLogo className="h-9" lightText={true} />
+              <SeylanehLogo className="h-8" />
             </div>
           )}
         </div>

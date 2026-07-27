@@ -9,6 +9,16 @@ createRoot(document.getElementById('root')!).render(
   </StrictMode>,
 );
 
+const splashEl = document.getElementById('app-splash');
+if (splashEl) {
+  window.requestAnimationFrame(() => {
+    setTimeout(() => {
+      splashEl.classList.add('splash-hidden');
+      setTimeout(() => splashEl.remove(), 400);
+    }, 400);
+  });
+}
+
 if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
   window.addEventListener('load', () => {
     navigator.serviceWorker

@@ -59,10 +59,10 @@ export const LoginView: React.FC = () => {
     <div className="min-h-screen bg-gradient-to-b from-emerald-950 via-emerald-900 to-slate-900 text-white flex flex-col justify-between p-4 sm:p-6">
       {/* Top Branding Header */}
       <div className="pt-6 text-center flex flex-col items-center">
-        <div className="bg-emerald-900/60 p-3.5 rounded-3xl border border-emerald-700/50 shadow-xl mb-3">
-          <SeylanehLogo className="h-12" lightText={true} />
+        <div className="bg-white p-3.5 rounded-3xl shadow-xl mb-3">
+          <SeylanehLogo className="h-12" />
         </div>
-        <h1 className="text-xl font-black text-white tracking-tight">سامانه سفارشدهی عمده سیلانه سبز</h1>
+        <h1 className="text-xl font-black text-white tracking-tight">سامانه سفارش‌دهی عمده هلدینگ سیلانه سبز</h1>
         <p className="text-emerald-300/90 text-xs mt-1 font-medium max-w-xs">
           تأمین مستقیم محصولات آرایشی، بهداشتی و دارویی
         </p>
