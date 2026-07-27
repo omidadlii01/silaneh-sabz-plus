@@ -1,0 +1,8 @@
+{
+  "name": "Remix Remix سیلانه سبز پلاس",
+  "description": "سامانه سفارش‌دهی عمده محصولات FMCG سیلانه سبز ویژه داروخانه‌ها و فروشگاه‌ها",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

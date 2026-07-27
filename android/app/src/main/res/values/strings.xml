@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">سیلانه سبز پلاس</string>
+    <string name="title_activity_main">سیلانه سبز پلاس</string>
+    <string name="package_name">com.silaneh.sabzplus</string>
+    <string name="custom_url_scheme">com.silaneh.sabzplus</string>
+</resources>
