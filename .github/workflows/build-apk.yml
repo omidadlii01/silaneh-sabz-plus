@@ -60,11 +60,14 @@ jobs:
             exit $code
           fi
 
+      - name: Rename APK
+        run: cp android/app/build/outputs/apk/debug/app-debug.apk android/app/build/outputs/apk/debug/silaneh-sabz-plus.apk
+
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: silaneh-sabz-plus-debug-apk
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          path: android/app/build/outputs/apk/debug/silaneh-sabz-plus.apk
 
       - name: Publish APK as public Release asset
         uses: softprops/action-gh-release@v2
@@ -72,7 +75,7 @@ jobs:
           tag_name: latest
           name: "Silaneh Sabz Plus - Latest APK"
           body: "Automatically built debug APK. Direct download, no GitHub login required."
-          files: android/app/build/outputs/apk/debug/app-debug.apk
+          files: android/app/build/outputs/apk/debug/silaneh-sabz-plus.apk
           make_latest: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

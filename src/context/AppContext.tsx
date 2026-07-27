@@ -88,7 +88,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [customers, setCustomers] = useState<Customer[]>(INITIAL_CUSTOMERS);
   const [currentCustomer, setCurrentCustomer] = useState<Customer>(INITIAL_CUSTOMERS[0]);
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
-  const [viewScreen, setViewScreen] = useState<ViewScreen>('home');
+  const [viewScreen, setViewScreen] = useState<ViewScreen>('login');
   const [activeTab, setActiveTab] = useState<ActiveTab>('home');
 
   const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
