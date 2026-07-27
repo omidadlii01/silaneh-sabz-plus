@@ -30,15 +30,32 @@ jobs:
           java-version: '21'
 
       - name: Sync Capacitor Android project
-        run: npx cap sync android
+        run: |
+          set +e
+          npx cap sync android > cap_sync_output.log 2>&1
+          code=$?
+          cat cap_sync_output.log
+          if [ $code -ne 0 ]; then
+            msg=$(tail -c 1800 cap_sync_output.log | tr '\n' ' ' | tr '%' ' ')
+            echo "::error::CAP_SYNC_FAILED: $msg"
+            exit $code
+          fi
 
       - name: Grant execute permission for gradlew
         run: chmod +x android/gradlew
 
       - name: Build debug APK
         run: |
+          set +e
           cd android
-          ./gradlew assembleDebug --no-daemon
+          ./gradlew assembleDebug --no-daemon > gradle_output.log 2>&1
+          code=$?
+          tail -c 4000 gradle_output.log
+          if [ $code -ne 0 ]; then
+            msg=$(tail -c 1800 gradle_output.log | tr '\n' ' ' | tr '%' ' ')
+            echo "::error::GRADLE_FAILED: $msg"
+            exit $code
+          fi
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
