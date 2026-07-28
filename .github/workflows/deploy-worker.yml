@@ -101,3 +101,20 @@ jobs:
             echo "::error::DEPLOY_FAILED: $msg"
             exit $code
           fi
+
+      - name: Smoke test API (signup, duplicate check, login)
+        run: |
+          set +e
+          URL="https://silaneh-sabz-api.omidadli78.workers.dev"
+          PHONE="09120000$RANDOM"
+
+          SIGNUP1=$(curl -s -X POST "$URL/api/signup" -H "Content-Type: application/json" -d "{\"firstName\":\"تست\",\"lastName\":\"تستی\",\"phone\":\"$PHONE\",\"storeName\":\"فروشگاه تست\",\"businessType\":\"داروخانه\",\"address\":\"تهران\"}")
+          echo "Signup 1: $SIGNUP1"
+
+          SIGNUP2=$(curl -s -X POST "$URL/api/signup" -H "Content-Type: application/json" -d "{\"firstName\":\"تست٢\",\"lastName\":\"تستی٢\",\"phone\":\"$PHONE\",\"storeName\":\"فروشگاه دو\",\"businessType\":\"داروخانه\",\"address\":\"تهران\"}")
+          echo "Signup 2 (should be duplicate error): $SIGNUP2"
+
+          LOGIN=$(curl -s -X POST "$URL/api/login" -H "Content-Type: application/json" -d "{\"phone\":\"$PHONE\"}")
+          echo "Login: $LOGIN"
+
+          echo "::notice::SMOKE_TEST_RESULTS signup1=$SIGNUP1 || signup2_dup=$SIGNUP2 || login=$LOGIN"
