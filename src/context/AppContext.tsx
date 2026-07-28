@@ -130,13 +130,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     else if (screen === 'account') setActiveTab('account');
   };
 
+  const enrichOrderItems = (fetchedOrders: Order[]): Order[] =>
+    fetchedOrders.map((order) => ({
+      ...order,
+      items: order.items.map((item) => {
+        const product = products.find((p) => p.id === item.productId);
+        return product
+          ? { ...item, brand: product.brand, cartonQuantity: product.cartonQuantity, productName: item.productName || product.name }
+          : item;
+      }),
+    }));
+
   const login = async (phone: string): Promise<void> => {
     const customer = await apiLogin(phone); // throws with Persian error message on failure
     setCurrentCustomer(customer);
     setIsAdmin(false);
     try {
       const fetchedOrders = await apiGetOrders(customer.id, customer.storeName);
-      setOrders(fetchedOrders);
+      setOrders(enrichOrderItems(fetchedOrders));
     } catch {
       setOrders([]);
     }

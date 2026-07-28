@@ -112,7 +112,7 @@ export default {
         return json({ customer: await customerToJson(customer) });
       }
 
-      // --- GET CUSTOMER ORDERS ---
+      // --- GET CUSTOMER ORDERS (with items) ---
       const ordersMatch = path.match(/^\/api\/customers\/(\d+)\/orders$/);
       if (ordersMatch && method === 'GET') {
         const customerId = ordersMatch[1];
@@ -122,7 +122,31 @@ export default {
           .bind(customerId)
           .all();
 
-        return json({ orders: orders.results });
+        const orderRows = orders.results as any[];
+        if (orderRows.length === 0) {
+          return json({ orders: [] });
+        }
+
+        const orderIds = orderRows.map((o) => o.id);
+        const placeholders = orderIds.map(() => '?').join(',');
+        const itemsResult = await env.DB.prepare(
+          `SELECT * FROM order_items WHERE order_id IN (${placeholders}) ORDER BY id ASC`,
+        )
+          .bind(...orderIds)
+          .all();
+
+        const itemsByOrder: Record<number, any[]> = {};
+        for (const item of itemsResult.results as any[]) {
+          if (!itemsByOrder[item.order_id]) itemsByOrder[item.order_id] = [];
+          itemsByOrder[item.order_id].push(item);
+        }
+
+        const ordersWithItems = orderRows.map((o) => ({
+          ...o,
+          items: itemsByOrder[o.id] || [],
+        }));
+
+        return json({ orders: ordersWithItems });
       }
 
       // --- CREATE ORDER ---
