@@ -1,0 +1,12 @@
+{
+  "name": "silaneh-sabz-api",
+  "private": true,
+  "version": "0.0.1",
+  "scripts": {
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^3.90.0",
+    "typescript": "~5.8.2"
+  }
+}

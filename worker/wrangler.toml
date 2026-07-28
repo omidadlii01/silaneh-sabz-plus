@@ -1,0 +1,8 @@
+name = "silaneh-sabz-api"
+main = "src/index.ts"
+compatibility_date = "2024-09-23"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "silaneh-sabz-db"
+database_id = "PLACEHOLDER_WILL_BE_SET_BY_CI"
