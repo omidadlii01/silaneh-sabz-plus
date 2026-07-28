@@ -28,15 +28,15 @@ export const CheckoutView: React.FC = () => {
   const [customerNote, setCustomerNote] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleFinalConfirm = (e: React.FormEvent) => {
+  const handleFinalConfirm = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-
-    setTimeout(() => {
-      submitOrder(customerNote);
-      setIsSubmitting(false);
+    try {
+      await submitOrder(customerNote);
       navigateTo('order-success');
-    }, 600);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (

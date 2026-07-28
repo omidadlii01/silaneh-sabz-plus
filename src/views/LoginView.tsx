@@ -23,18 +23,26 @@ export const LoginView: React.FC = () => {
     address: '',
   });
   const [signupError, setSignupError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleLoginSubmit = (e: React.FormEvent) => {
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!phoneNumber.trim()) {
       setLoginError('لطفاً شماره تلفن همراه خود را وارد کنید.');
       return;
     }
     setLoginError('');
-    login(phoneNumber);
+    setIsSubmitting(true);
+    try {
+      await login(phoneNumber.trim());
+    } catch (err: any) {
+      setLoginError(err?.message || 'خطا در ورود. لطفاً دوباره تلاش کنید.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleSignupSubmit = (e: React.FormEvent) => {
+  const handleSignupSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const { firstName, lastName, phone, storeName, address } = signupForm;
 
@@ -44,15 +52,22 @@ export const LoginView: React.FC = () => {
     }
 
     setSignupError('');
-    signup({
-      firstName: signupForm.firstName.trim(),
-      lastName: signupForm.lastName.trim(),
-      phone: signupForm.phone.trim(),
-      password: signupForm.password.trim(),
-      storeName: signupForm.storeName.trim(),
-      address: signupForm.address.trim(),
-      businessType: signupForm.businessType,
-    });
+    setIsSubmitting(true);
+    try {
+      await signup({
+        firstName: signupForm.firstName.trim(),
+        lastName: signupForm.lastName.trim(),
+        phone: signupForm.phone.trim(),
+        password: signupForm.password.trim(),
+        storeName: signupForm.storeName.trim(),
+        address: signupForm.address.trim(),
+        businessType: signupForm.businessType,
+      });
+    } catch (err: any) {
+      setSignupError(err?.message || 'خطا در ثبت‌نام. لطفاً دوباره تلاش کنید.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (

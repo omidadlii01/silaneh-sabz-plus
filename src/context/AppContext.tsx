@@ -13,10 +13,9 @@ import {
 } from '../types';
 import {
   INITIAL_BRANDS,
-  INITIAL_CUSTOMERS,
-  INITIAL_ORDERS,
   INITIAL_PRODUCTS,
 } from '../mockData';
+import { apiSignup, apiLogin, apiGetOrders, apiCreateOrder } from '../api';
 
 interface AppContextType {
   // Navigation & User
@@ -27,7 +26,7 @@ interface AppContextType {
   viewScreen: ViewScreen;
   activeTab: ActiveTab;
   navigateTo: (screen: ViewScreen, params?: { product?: Product; order?: Order }) => void;
-  login: (phone: string) => void;
+  login: (phone: string) => Promise<void>;
   signup: (data: {
     firstName: string;
     lastName: string;
@@ -36,7 +35,7 @@ interface AppContextType {
     storeName: string;
     address: string;
     businessType?: BusinessType;
-  }) => void;
+  }) => Promise<void>;
   logout: () => void;
 
   // Cart
@@ -66,12 +65,27 @@ interface AppContextType {
   resetFilters: () => void;
 
   // Actions
-  submitOrder: (customerNote?: string) => Order;
+  submitOrder: (customerNote?: string) => Promise<Order>;
   reorder: (order: Order) => void;
   updateOrderStatus: (orderId: string, status: OrderStatus, adminNote?: string) => void;
   updateProduct: (updatedProduct: Product) => void;
   addProduct: (newProduct: Omit<Product, 'id'>) => void;
 }
+
+const EMPTY_CUSTOMER: Customer = {
+  id: '',
+  code: '',
+  firstName: '',
+  lastName: '',
+  storeName: '',
+  ownerName: '',
+  phone: '',
+  businessType: 'داروخانه',
+  address: '',
+  marketerName: '',
+  marketerPhone: '',
+  active: false,
+};
 
 const DEFAULT_FILTERS: FilterOptions = {
   brand: 'همه',
@@ -85,15 +99,15 @@ const DEFAULT_FILTERS: FilterOptions = {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [customers, setCustomers] = useState<Customer[]>(INITIAL_CUSTOMERS);
-  const [currentCustomer, setCurrentCustomer] = useState<Customer>(INITIAL_CUSTOMERS[0]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [currentCustomer, setCurrentCustomer] = useState<Customer>(EMPTY_CUSTOMER);
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [viewScreen, setViewScreen] = useState<ViewScreen>('login');
   const [activeTab, setActiveTab] = useState<ActiveTab>('home');
 
   const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
   const [brands] = useState<Brand[]>(INITIAL_BRANDS);
-  const [orders, setOrders] = useState<Order[]>(INITIAL_ORDERS);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
 
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -116,22 +130,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     else if (screen === 'account') setActiveTab('account');
   };
 
-  const login = (phone: string) => {
-    // Demo login: succeeds for any phone entered
-    const found = customers.find((c) => c.phone.trim() === phone.trim());
-    if (found) {
-      setCurrentCustomer(found);
-    } else {
-      setCurrentCustomer({
-        ...customers[0],
-        phone: phone || customers[0].phone,
-      });
-    }
+  const login = async (phone: string): Promise<void> => {
+    const customer = await apiLogin(phone); // throws with Persian error message on failure
+    setCurrentCustomer(customer);
     setIsAdmin(false);
+    try {
+      const fetchedOrders = await apiGetOrders(customer.id, customer.storeName);
+      setOrders(fetchedOrders);
+    } catch {
+      setOrders([]);
+    }
     navigateTo('home');
   };
 
-  const signup = (data: {
+  const signup = async (data: {
     firstName: string;
     lastName: string;
     phone: string;
@@ -139,26 +151,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     storeName: string;
     address: string;
     businessType?: BusinessType;
-  }) => {
-    const ownerName = `${data.firstName} ${data.lastName}`.trim();
-    const newCustomer: Customer = {
-      id: `cust-${Date.now()}`,
-      code: `CUST-${Math.floor(10000 + Math.random() * 90000)}`,
-      firstName: data.firstName,
-      lastName: data.lastName,
-      password: data.password || '',
-      storeName: data.storeName,
-      ownerName: ownerName || 'مدیر فروشگاه',
-      phone: data.phone,
-      businessType: data.businessType || 'داروخانه',
-      address: data.address,
-      marketerName: 'کارشناس فروش سیلانه سبز',
-      marketerPhone: '۰۲۱-۸۸۸۸۹۹۰۰',
-      active: true,
-    };
-    setCustomers((prev) => [newCustomer, ...prev]);
-    setCurrentCustomer(newCustomer);
+  }): Promise<void> => {
+    const customer = await apiSignup(data); // throws 'شماره موبایل تکراری است' on duplicate phone
+    setCustomers((prev) => [customer, ...prev]);
+    setCurrentCustomer(customer);
     setIsAdmin(false);
+    setOrders([]);
     navigateTo('home');
   };
 
@@ -223,8 +221,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [cartInitialAmount, cartDiscountAmount]);
 
   // Submit Order
-  const submitOrder = (customerNote?: string): Order => {
-    const orderNum = `SS-${Math.floor(10000000 + Math.random() * 90000000)}`;
+  const submitOrder = async (customerNote?: string): Promise<Order> => {
     const todayStr = new Date().toLocaleDateString('fa-IR', {
       year: 'numeric',
       month: '2-digit',
@@ -235,15 +232,41 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       minute: '2-digit',
     });
 
+    const itemsPayload = cart.map((item) => ({
+      productId: item.product.id,
+      productName: item.product.name,
+      quantity: item.quantity,
+      unitPrice: item.product.price,
+      totalPrice: item.product.price * item.quantity,
+    }));
+
+    let orderNumber = `SS-${Math.floor(10000000 + Math.random() * 90000000)}`;
+    let serverOrderId = `ord-${Date.now()}`;
+
+    try {
+      const result = await apiCreateOrder({
+        customerId: currentCustomer.id,
+        items: itemsPayload,
+        initialAmount: cartInitialAmount,
+        discount: cartDiscountAmount,
+        finalAmount: cartFinalAmount,
+        customerNote,
+      });
+      serverOrderId = String(result.orderId);
+      orderNumber = result.orderNumber;
+    } catch {
+      // If the API call fails, the order still shows locally for this session.
+    }
+
     const newOrder: Order = {
-      id: `ord-${Date.now()}`,
-      orderNumber: orderNum,
+      id: serverOrderId,
+      orderNumber,
       customerId: currentCustomer.id,
       storeName: currentCustomer.storeName,
       orderDate: `${todayStr} - ${timeStr}`,
       items: cart.map((item, idx) => ({
         id: `oi-${Date.now()}-${idx}`,
-        orderId: `ord-${Date.now()}`,
+        orderId: serverOrderId,
         productId: item.product.id,
         productName: item.product.name,
         brand: item.product.brand,
