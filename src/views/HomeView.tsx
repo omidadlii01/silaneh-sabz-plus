@@ -14,6 +14,7 @@ import {
 import { useApp } from '../context/AppContext';
 import { ProductCard } from '../components/ProductCard';
 import { StatusBadge } from '../components/StatusBadge';
+import { AppBanner } from '../components/AppBanner';
 import { formatCurrency, toPersianDigits } from '../utils';
 
 interface BrandCardButtonProps {
@@ -96,6 +97,7 @@ export const HomeView: React.FC = () => {
 
   return (
     <div className="pb-20 pt-3 px-3 sm:px-4 max-w-md mx-auto space-y-5">
+      <AppBanner />
       {/* Greeting Banner */}
       <div className="bg-gradient-to-l from-emerald-900 to-emerald-800 text-white p-4 rounded-2xl shadow-sm relative overflow-hidden">
         <div className="relative z-10">

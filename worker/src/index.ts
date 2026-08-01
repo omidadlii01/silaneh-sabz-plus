@@ -170,6 +170,14 @@ export default {
         return json({ brands: (rows.results as any[]).map(brandToJson) });
       }
 
+      // --- PUBLIC: GET APP SETTINGS (banner, messages, etc) ---
+      if (path === '/api/settings' && method === 'GET') {
+        const rows = await env.DB.prepare('SELECT key, value FROM app_settings').all();
+        const settings: Record<string, string> = {};
+        for (const row of rows.results as any[]) settings[row.key] = row.value;
+        return json({ settings });
+      }
+
       // --- GET CUSTOMER ORDERS (with items) ---
       const ordersMatch = path.match(/^\/api\/customers\/(\d+)\/orders$/);
       if (ordersMatch && method === 'GET') {
@@ -245,6 +253,7 @@ export default {
         path.startsWith('/api/products/') ||
         (path === '/api/brands' && method !== 'GET') ||
         path.startsWith('/api/brands/') ||
+        (path === '/api/settings' && method !== 'GET') ||
         /^\/api\/orders\/\d+\/status$/.test(path);
 
       if (requiresAdmin && path !== '/api/admin/login' && !isAuthorized(request, env)) {
@@ -427,6 +436,23 @@ export default {
         const id = brandMatch[1];
         await env.DB.prepare('UPDATE brands SET active = 0 WHERE id = ?').bind(id).run();
         return json({ ok: true });
+      }
+
+      // --- ADMIN: UPDATE APP SETTINGS ---
+      if (path === '/api/settings' && method === 'PUT') {
+        const b = await request.json<any>();
+        const entries = Object.entries(b || {});
+        for (const [key, value] of entries) {
+          await env.DB.prepare(
+            'INSERT INTO app_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value',
+          )
+            .bind(key, String(value ?? ''))
+            .run();
+        }
+        const rows = await env.DB.prepare('SELECT key, value FROM app_settings').all();
+        const settings: Record<string, string> = {};
+        for (const row of rows.results as any[]) settings[row.key] = row.value;
+        return json({ settings });
       }
 
       return json({ error: 'مسیر یافت نشد.' }, 404);

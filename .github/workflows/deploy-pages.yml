@@ -34,6 +34,21 @@ jobs:
         env:
           BASE_PATH: /${{ github.event.repository.name }}/
 
+      - name: Install admin panel dependencies
+        run: npm install
+        working-directory: ./admin
+
+      - name: Build admin panel
+        run: npm run build
+        working-directory: ./admin
+        env:
+          BASE_PATH: /${{ github.event.repository.name }}/admin/
+
+      - name: Merge admin build into main dist
+        run: |
+          mkdir -p dist/admin
+          cp -r admin/dist/* dist/admin/
+
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
