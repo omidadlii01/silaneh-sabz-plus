@@ -9,6 +9,7 @@ const EMPTY_PRODUCT = {
   brand: '',
   category: '',
   imageUrl: '',
+  barcode: '',
   cartonQuantity: 1,
   price: 0,
   unitPrice: 0,
@@ -27,6 +28,32 @@ export default function Products() {
   const [editing, setEditing] = useState<any | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [suggestQuery, setSuggestQuery] = useState('');
+  const [suggestField, setSuggestField] = useState<'name' | 'code' | null>(null);
+
+  // Autocomplete: when typing in name or code field, look up existing products
+  // (by name OR code OR barcode) and let the admin pick one to auto-fill every
+  // other field. This works for both "create new" (paste in a known code/name
+  // to prefill everything) and "edit" (quickly find & update an item).
+  const suggestions =
+    suggestField && suggestQuery.trim().length > 0
+      ? (products || [])
+          .filter((p) => {
+            const q = suggestQuery.trim().toLowerCase();
+            return (
+              p.name?.toLowerCase().includes(q) ||
+              p.code?.toLowerCase().includes(q) ||
+              p.barcode?.toLowerCase().includes(q)
+            );
+          })
+          .slice(0, 8)
+      : [];
+
+  const applySuggestion = (p: any) => {
+    setEditing({ ...p });
+    setSuggestField(null);
+    setSuggestQuery('');
+  };
 
   const load = () => {
     api
@@ -157,9 +184,56 @@ export default function Products() {
               </button>
             </div>
 
+            <p className="text-xs text-gray-400 -mt-2 mb-3">
+              نام یا کد محصول را تایپ کنید تا در صورت وجود در دیتابیس، بقیه‌ی فیلدها خودکار پر شوند.
+            </p>
+
             <div className="grid grid-cols-2 gap-3">
-              <Field label="نام محصول" value={editing.name} onChange={(v) => setEditing({ ...editing, name: v })} full />
-              <Field label="کد" value={editing.code} onChange={(v) => setEditing({ ...editing, code: v })} />
+              <div className="col-span-2 relative">
+                <label className="block text-xs text-gray-500 mb-1">نام محصول</label>
+                <input
+                  type="text"
+                  value={editing.name ?? ''}
+                  onChange={(e) => {
+                    setEditing({ ...editing, name: e.target.value });
+                    setSuggestField('name');
+                    setSuggestQuery(e.target.value);
+                  }}
+                  onFocus={() => {
+                    setSuggestField('name');
+                    setSuggestQuery(editing.name ?? '');
+                  }}
+                  onBlur={() => setTimeout(() => setSuggestField(null), 150)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                />
+                {suggestField === 'name' && suggestions.length > 0 && (
+                  <SuggestionList suggestions={suggestions} onPick={applySuggestion} />
+                )}
+              </div>
+
+              <div className="relative">
+                <label className="block text-xs text-gray-500 mb-1">کد محصول</label>
+                <input
+                  type="text"
+                  value={editing.code ?? ''}
+                  onChange={(e) => {
+                    setEditing({ ...editing, code: e.target.value });
+                    setSuggestField('code');
+                    setSuggestQuery(e.target.value);
+                  }}
+                  onFocus={() => {
+                    setSuggestField('code');
+                    setSuggestQuery(editing.code ?? '');
+                  }}
+                  onBlur={() => setTimeout(() => setSuggestField(null), 150)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                />
+                {suggestField === 'code' && suggestions.length > 0 && (
+                  <SuggestionList suggestions={suggestions} onPick={applySuggestion} />
+                )}
+              </div>
+
+              <Field label="بارکد" value={editing.barcode} onChange={(v) => setEditing({ ...editing, barcode: v })} />
               <Field label="برند" value={editing.brand} onChange={(v) => setEditing({ ...editing, brand: v })} />
               <Field label="دسته‌بندی" value={editing.category} onChange={(v) => setEditing({ ...editing, category: v })} />
               <Field
@@ -269,6 +343,31 @@ function Field({
           className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600"
         />
       )}
+    </div>
+  );
+}
+
+function SuggestionList({ suggestions, onPick }: { suggestions: any[]; onPick: (p: any) => void }) {
+  return (
+    <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-56 overflow-y-auto">
+      {suggestions.map((p) => (
+        <button
+          key={p.id}
+          type="button"
+          onMouseDown={() => onPick(p)}
+          className="w-full text-right px-3 py-2 text-sm hover:bg-emerald-50 flex items-center gap-2 border-b border-gray-50 last:border-0"
+        >
+          {p.imageUrl && (
+            <img src={p.imageUrl} alt="" className="w-8 h-8 rounded object-cover flex-shrink-0 bg-gray-100" />
+          )}
+          <span className="flex-1 min-w-0">
+            <span className="block text-gray-900 truncate">{p.name}</span>
+            <span className="block text-gray-400 text-xs">
+              کد: {p.code} {p.brand ? `· ${p.brand}` : ''}
+            </span>
+          </span>
+        </button>
+      ))}
     </div>
   );
 }

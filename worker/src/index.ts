@@ -61,6 +61,7 @@ function productToJson(p: any) {
     brand: p.brand,
     category: p.category,
     imageUrl: p.image_url,
+    barcode: p.barcode,
     cartonQuantity: p.carton_quantity,
     price: p.price,
     unitPrice: p.unit_price,
@@ -339,8 +340,8 @@ export default {
         const b = await request.json<any>();
         const id = b.id || genId('p');
         await env.DB.prepare(
-          `INSERT INTO products (id, code, name, brand, category, image_url, carton_quantity, price, unit_price, in_stock, stock_count, special_offer, discount_percentage, is_new, description, active)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          `INSERT INTO products (id, code, name, brand, category, image_url, barcode, carton_quantity, price, unit_price, in_stock, stock_count, special_offer, discount_percentage, is_new, description, active)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         )
           .bind(
             id,
@@ -349,6 +350,7 @@ export default {
             b.brand,
             b.category || '',
             b.imageUrl || '',
+            b.barcode || '',
             b.cartonQuantity || 1,
             b.price || 0,
             b.unitPrice || 0,
@@ -371,7 +373,7 @@ export default {
         const id = productMatch[1];
         const b = await request.json<any>();
         await env.DB.prepare(
-          `UPDATE products SET code=?, name=?, brand=?, category=?, image_url=?, carton_quantity=?, price=?, unit_price=?, in_stock=?, stock_count=?, special_offer=?, discount_percentage=?, is_new=?, description=?, active=?
+          `UPDATE products SET code=?, name=?, brand=?, category=?, image_url=?, barcode=?, carton_quantity=?, price=?, unit_price=?, in_stock=?, stock_count=?, special_offer=?, discount_percentage=?, is_new=?, description=?, active=?
            WHERE id=?`,
         )
           .bind(
@@ -380,6 +382,7 @@ export default {
             b.brand,
             b.category || '',
             b.imageUrl || '',
+            b.barcode || '',
             b.cartonQuantity || 1,
             b.price || 0,
             b.unitPrice || 0,
