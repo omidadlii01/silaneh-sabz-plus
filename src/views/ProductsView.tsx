@@ -7,6 +7,8 @@ import {
   Flame,
   CheckCircle2,
   ArrowRight,
+  ArrowUpDown,
+  SlidersHorizontal,
   Plus,
   Minus,
   Box,
@@ -17,8 +19,8 @@ import { toPersianDigits, formatCurrency, resolveAssetUrl } from '../utils';
 import { Product } from '../types';
 
 // Single-row product item used on the dedicated brand page (matches the
-// reference layout: name + packaging + price on the right, product image
-// with an add-to-cart button on the left).
+// reference layout: product image on the right (with add-to-cart button),
+// name + packaging + price on the left).
 const BrandProductRow: React.FC<{ product: Product }> = ({ product }) => {
   const { cart, addToCart, updateCartQuantity, navigateTo } = useApp();
   const [imgError, setImgError] = useState(false);
@@ -27,37 +29,6 @@ const BrandProductRow: React.FC<{ product: Product }> = ({ product }) => {
 
   return (
     <div className="flex items-center gap-3 bg-white border-b border-slate-100 py-3.5 px-1">
-      <div className="flex-1 min-w-0">
-        <h3
-          onClick={() => navigateTo('product-detail', { product })}
-          className="text-xs font-extrabold text-slate-900 leading-snug line-clamp-2 cursor-pointer hover:text-emerald-800 transition-colors"
-        >
-          {product.name}
-        </h3>
-        <div className="text-[11px] text-slate-500 mt-1.5">
-          {toPersianDigits(product.cartonQuantity)} عدد
-        </div>
-
-        <div className="mt-2 flex items-center gap-1.5 flex-wrap">
-          {!!product.discountPercentage && (
-            <span className="bg-emerald-100 text-emerald-800 text-[10px] font-extrabold px-1.5 py-0.5 rounded-md">
-              {toPersianDigits(product.discountPercentage)}٪
-            </span>
-          )}
-          <span className="text-sm font-black text-slate-900">{formatCurrency(product.price)}</span>
-        </div>
-        {product.unitPrice > 0 && (
-          <div className="text-[11px] text-slate-400 mt-0.5">
-            مصرف‌کننده: {formatCurrency(product.unitPrice)}
-          </div>
-        )}
-        {!product.inStock && (
-          <span className="inline-block mt-1.5 text-[10px] font-extrabold text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded-md border border-rose-100">
-            ناموجود
-          </span>
-        )}
-      </div>
-
       <div
         className="relative w-24 h-24 flex-shrink-0 rounded-xl bg-slate-50 border border-slate-100 overflow-hidden cursor-pointer"
         onClick={() => navigateTo('product-detail', { product })}
@@ -110,12 +81,43 @@ const BrandProductRow: React.FC<{ product: Product }> = ({ product }) => {
           )
         )}
       </div>
+
+      <div className="flex-1 min-w-0 text-right">
+        <h3
+          onClick={() => navigateTo('product-detail', { product })}
+          className="text-xs font-extrabold text-slate-900 leading-snug line-clamp-2 cursor-pointer hover:text-emerald-800 transition-colors"
+        >
+          {product.name}
+        </h3>
+        <div className="text-[11px] text-slate-500 mt-1.5">
+          {toPersianDigits(product.cartonQuantity)} عدد
+        </div>
+
+        <div className="mt-2 flex items-center gap-1.5 flex-wrap">
+          {!!product.discountPercentage && (
+            <span className="bg-emerald-100 text-emerald-800 text-[10px] font-extrabold px-1.5 py-0.5 rounded-md">
+              {toPersianDigits(product.discountPercentage)}٪
+            </span>
+          )}
+          <span className="text-sm font-black text-slate-900">{formatCurrency(product.price)}</span>
+        </div>
+        {product.unitPrice > 0 && (
+          <div className="text-[11px] text-slate-400 mt-0.5">
+            مصرف‌کننده: {formatCurrency(product.unitPrice)}
+          </div>
+        )}
+        {!product.inStock && (
+          <span className="inline-block mt-1.5 text-[10px] font-extrabold text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded-md border border-rose-100">
+            ناموجود
+          </span>
+        )}
+      </div>
     </div>
   );
 };
 
 export const ProductsView: React.FC = () => {
-  const { products, brands, filters, updateFilter, resetFilters, navigateTo } = useApp();
+  const { products, brands, filters, updateFilter, resetFilters, navigateTo, goBack } = useApp();
 
   // When a specific brand is selected (e.g. tapped from the brand grid on
   // Home), this becomes a dedicated "brand page": no global search box, no
@@ -131,6 +133,18 @@ export const ProductsView: React.FC = () => {
   // does NOT navigate away to the global catalog).
   const [brandSearchOpen, setBrandSearchOpen] = useState(false);
   const [brandSearchTerm, setBrandSearchTerm] = useState('');
+  const [brandSortOrder, setBrandSortOrder] = useState<'none' | 'price-asc' | 'price-desc'>('none');
+
+  const handleBrandBack = () => {
+    resetFilters();
+    goBack();
+  };
+
+  const cycleBrandSort = () => {
+    setBrandSortOrder((prev) =>
+      prev === 'none' ? 'price-asc' : prev === 'price-asc' ? 'price-desc' : 'none',
+    );
+  };
 
   // Distinct Categories list from products
   const categories = useMemo(() => {
@@ -141,7 +155,7 @@ export const ProductsView: React.FC = () => {
 
   // Filtered Products
   const filteredProducts = useMemo(() => {
-    return products.filter((p) => {
+    const list = products.filter((p) => {
       if (!p.active) return false;
       if (filters.brand !== 'همه' && p.brand !== filters.brand) return false;
       if (filters.category !== 'همه' && p.category !== filters.category) return false;
@@ -161,7 +175,13 @@ export const ProductsView: React.FC = () => {
       }
       return true;
     });
-  }, [products, filters, isBrandView, brandSearchTerm]);
+
+    if (isBrandView && brandSortOrder !== 'none') {
+      list.sort((a, b) => (brandSortOrder === 'price-asc' ? a.price - b.price : b.price - a.price));
+    }
+
+    return list;
+  }, [products, filters, isBrandView, brandSearchTerm, brandSortOrder]);
 
   // ---------- Dedicated brand page ----------
   if (isBrandView) {
@@ -169,7 +189,7 @@ export const ProductsView: React.FC = () => {
       <div className="pb-20 max-w-md mx-auto">
         {/* Banner */}
         <div
-          className={`relative h-44 bg-gradient-to-br ${selectedBrand?.logoColor || 'from-emerald-700 to-emerald-900'} overflow-hidden`}
+          className={`relative h-40 bg-gradient-to-br ${selectedBrand?.logoColor || 'from-emerald-700 to-emerald-900'} overflow-hidden`}
         >
           {/* Wide banner/cover image slot */}
           {selectedBrand?.bannerImageUrl && (
@@ -180,23 +200,17 @@ export const ProductsView: React.FC = () => {
               className="absolute inset-0 w-full h-full object-cover"
             />
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-black/0 to-black/10" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/0 to-black/10" />
 
-          {/* Back button — fixed top-right corner */}
+          {/* Back button — fixed top-right corner. Returns to whichever
+              screen the user actually came from (e.g. Home), not a fixed page. */}
           <button
-            onClick={resetFilters}
+            onClick={handleBrandBack}
             className="absolute top-3 right-3 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-white/90 text-slate-700 shadow-xs"
             aria-label="بازگشت"
           >
             <ArrowRight className="w-4 h-4" />
           </button>
-
-          {/* Brand title — bounded strip between the two buttons so it can truncate safely */}
-          <div className="absolute top-3 right-14 left-14 z-0 flex justify-end pointer-events-none">
-            <h2 className="text-white text-base font-extrabold drop-shadow-sm truncate min-w-0">
-              محصولات {filters.brand}
-            </h2>
-          </div>
 
           {/* Top-left: brand-scoped search toggle */}
           <button
@@ -209,13 +223,18 @@ export const ProductsView: React.FC = () => {
             <Search className="w-4 h-4" />
           </button>
 
-          {/* Brand logo, bottom-right of the banner */}
-          <div className="absolute bottom-3 right-3 z-10 w-16 h-16 rounded-2xl bg-white border-4 border-white shadow-md overflow-hidden flex items-center justify-center flex-shrink-0">
-            {selectedBrand?.imageUrl ? (
-              <img src={resolveAssetUrl(selectedBrand.imageUrl)} alt={filters.brand} className="w-full h-full object-contain p-1" />
-            ) : (
-              <span className="text-emerald-800 font-black text-lg">{filters.brand.slice(0, 2)}</span>
-            )}
+          {/* Bottom-right: logo + brand name together, both anchored to the right */}
+          <div className="absolute bottom-3 right-3 left-3 z-10 flex items-center gap-2.5">
+            <div className="w-14 h-14 rounded-2xl bg-white border-4 border-white shadow-md overflow-hidden flex items-center justify-center flex-shrink-0">
+              {selectedBrand?.imageUrl ? (
+                <img src={resolveAssetUrl(selectedBrand.imageUrl)} alt={filters.brand} className="w-full h-full object-contain p-1" />
+              ) : (
+                <span className="text-emerald-800 font-black text-base">{filters.brand.slice(0, 2)}</span>
+              )}
+            </div>
+            <h2 className="flex-1 min-w-0 truncate text-right text-white text-sm font-extrabold drop-shadow-sm">
+              محصولات {filters.brand}
+            </h2>
           </div>
         </div>
 
@@ -237,25 +256,14 @@ export const ProductsView: React.FC = () => {
         )}
 
         <div className="px-3 sm:px-4 pt-3 space-y-3">
-          {/* Count + quick filter chips */}
+          {/* Count + quick filter/sort chips — right to left: تعداد کالا، آفر ویژه، مرتب‌سازی، فیلترها */}
           <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
-            <span className="text-[11px] font-extrabold text-slate-700 bg-slate-100 px-2.5 py-1.5 rounded-xl whitespace-nowrap">
+            <span className="text-[11px] font-extrabold text-slate-700 bg-slate-100 px-2.5 py-1.5 rounded-xl whitespace-nowrap flex-shrink-0">
               {toPersianDigits(filteredProducts.length)} کالا
             </span>
             <button
-              onClick={() => updateFilter('inStockOnly', !filters.inStockOnly)}
-              className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold flex items-center gap-1 border transition-all whitespace-nowrap ${
-                filters.inStockOnly
-                  ? 'bg-emerald-100 text-emerald-900 border-emerald-300'
-                  : 'bg-white text-slate-600 border-slate-200'
-              }`}
-            >
-              <CheckCircle2 className={`w-3.5 h-3.5 ${filters.inStockOnly ? 'text-emerald-700' : 'text-slate-400'}`} />
-              <span>فقط موجود</span>
-            </button>
-            <button
               onClick={() => updateFilter('specialOfferOnly', !filters.specialOfferOnly)}
-              className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold flex items-center gap-1 border transition-all whitespace-nowrap ${
+              className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold flex items-center gap-1 border transition-all whitespace-nowrap flex-shrink-0 ${
                 filters.specialOfferOnly
                   ? 'bg-rose-100 text-rose-900 border-rose-300'
                   : 'bg-white text-slate-600 border-slate-200'
@@ -263,6 +271,35 @@ export const ProductsView: React.FC = () => {
             >
               <Flame className={`w-3.5 h-3.5 ${filters.specialOfferOnly ? 'text-rose-600' : 'text-slate-400'}`} />
               <span>آفر ویژه</span>
+            </button>
+
+            <div className="flex-1" />
+
+            <button
+              onClick={cycleBrandSort}
+              className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold flex items-center gap-1 border transition-all whitespace-nowrap flex-shrink-0 ${
+                brandSortOrder !== 'none'
+                  ? 'bg-emerald-100 text-emerald-900 border-emerald-300'
+                  : 'bg-white text-slate-600 border-slate-200'
+              }`}
+            >
+              <ArrowUpDown className={`w-3.5 h-3.5 ${brandSortOrder !== 'none' ? 'text-emerald-700' : 'text-slate-400'}`} />
+              <span>
+                {brandSortOrder === 'none' && 'مرتب‌سازی'}
+                {brandSortOrder === 'price-asc' && 'ارزان‌ترین'}
+                {brandSortOrder === 'price-desc' && 'گران‌ترین'}
+              </span>
+            </button>
+            <button
+              onClick={() => updateFilter('inStockOnly', !filters.inStockOnly)}
+              className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold flex items-center gap-1 border transition-all whitespace-nowrap flex-shrink-0 ${
+                filters.inStockOnly
+                  ? 'bg-emerald-100 text-emerald-900 border-emerald-300'
+                  : 'bg-white text-slate-600 border-slate-200'
+              }`}
+            >
+              <SlidersHorizontal className={`w-3.5 h-3.5 ${filters.inStockOnly ? 'text-emerald-700' : 'text-slate-400'}`} />
+              <span>فیلترها</span>
             </button>
           </div>
 

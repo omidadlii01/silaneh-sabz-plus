@@ -27,6 +27,7 @@ interface AppContextType {
   viewScreen: ViewScreen;
   activeTab: ActiveTab;
   navigateTo: (screen: ViewScreen, params?: { product?: Product; order?: Order }) => void;
+  goBack: () => void;
   login: (phone: string) => Promise<void>;
   signup: (data: {
     firstName: string;
@@ -122,6 +123,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [currentCustomer, setCurrentCustomer] = useState<Customer>(savedCustomer || EMPTY_CUSTOMER);
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [viewScreen, setViewScreen] = useState<ViewScreen>(savedCustomer ? 'home' : 'login');
+  const [previousViewScreen, setPreviousViewScreen] = useState<ViewScreen>('home');
   const [activeTab, setActiveTab] = useState<ActiveTab>('home');
 
   const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
@@ -181,6 +183,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (params?.product) setSelectedProduct(params.product);
     if (params?.order) setSelectedOrder(params.order);
 
+    setPreviousViewScreen((prev) => (screen !== viewScreen ? viewScreen : prev));
     setViewScreen(screen);
 
     // Sync bottom tab
@@ -188,6 +191,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     else if (screen === 'products') setActiveTab('products');
     else if (screen === 'my-orders') setActiveTab('orders');
     else if (screen === 'account') setActiveTab('account');
+  };
+
+  // Go back to whatever screen the user was actually on before (e.g. Home),
+  // instead of always landing on a hardcoded screen.
+  const goBack = () => {
+    navigateTo(previousViewScreen);
   };
 
   const enrichOrderItems = (fetchedOrders: Order[]): Order[] =>
@@ -453,6 +462,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         viewScreen,
         activeTab,
         navigateTo,
+        goBack,
         login,
         signup,
         logout,
