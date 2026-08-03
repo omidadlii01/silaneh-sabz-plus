@@ -124,6 +124,8 @@ jobs:
           echo "Brands count: $BRAND_COUNT"
           BRAND_NAMES=$(echo "$BRANDS" | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{try{const b=JSON.parse(d).brands;console.log(b.map(x=>x.id+':'+x.name+':img='+(!!x.imageUrl)).join(' | '))}catch(e){console.log('PARSE_ERROR')}})")
           echo "::notice::BRAND_LIST $BRAND_NAMES"
+          OLD_BRAND_DETAILS=$(echo "$BRANDS" | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{try{const b=JSON.parse(d).brands.filter(x=>/^b[0-9]+$/.test(x.id));console.log(JSON.stringify(b))}catch(e){console.log('PARSE_ERROR')}})")
+          echo "::notice::OLD_BRAND_DETAILS $OLD_BRAND_DETAILS"
 
           NO_AUTH=$(curl -s -o /dev/null -w "%{http_code}" "$URL/api/admin/stats")
           echo "Admin stats without token (expect 401): $NO_AUTH"
