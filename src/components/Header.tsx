@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShoppingBag, ArrowRight, ShieldCheck, Store, UserCheck } from 'lucide-react';
+import { ShoppingBag, ArrowRight, ShieldCheck, Bell, User, ClipboardList } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { toPersianDigits } from '../utils';
 import { SeylanehLogo } from './SeylanehLogo';
@@ -9,17 +9,16 @@ export const Header: React.FC = () => {
     viewScreen,
     navigateTo,
     cartTotalCount,
-    currentCustomer,
     isAdmin,
   } = useApp();
 
   const isSubPage = ['product-detail', 'checkout', 'order-success'].includes(viewScreen);
 
   return (
-    <header className="sticky top-0 z-30 bg-emerald-950 text-white shadow-md border-b border-emerald-900">
-      <div className="max-w-md mx-auto px-4 h-14 flex items-center justify-between">
-        {/* Left/Right depending on RTL: Back button or Logo */}
-        <div className="flex items-center gap-2.5">
+    <header className="sticky top-0 z-30 bg-white text-slate-900 shadow-sm border-b border-slate-200">
+      <div className="max-w-md mx-auto px-3 h-14 grid grid-cols-3 items-center">
+        {/* Right column: back button on sub-pages, admin badge otherwise */}
+        <div className="flex items-center justify-start">
           {isSubPage ? (
             <button
               onClick={() => {
@@ -27,48 +26,66 @@ export const Header: React.FC = () => {
                 else if (viewScreen === 'checkout') navigateTo('cart');
                 else navigateTo('home');
               }}
-              className="p-1.5 rounded-lg text-emerald-200 hover:bg-emerald-900/60 active:scale-95 transition-all flex items-center gap-1 text-sm font-medium"
+              className="p-1.5 rounded-lg text-slate-600 hover:bg-slate-100 active:scale-95 transition-all flex items-center gap-1 text-sm font-medium"
             >
               <ArrowRight className="w-5 h-5" />
               <span>بازگشت</span>
             </button>
-          ) : (
-            <div
-              onClick={() => navigateTo('home')}
-              className="flex items-center gap-2 cursor-pointer group py-1 bg-white rounded-xl px-2 py-1"
-            >
-              <SeylanehLogo className="h-8" />
-            </div>
-          )}
-        </div>
-
-        {/* Right side controls */}
-        <div className="flex items-center gap-2">
-          {/* Admin badge if active */}
-          {isAdmin ? (
+          ) : isAdmin ? (
             <button
               onClick={() => navigateTo('admin')}
-              className="flex items-center gap-1 bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs px-2.5 py-1 rounded-full font-medium"
+              className="flex items-center gap-1 bg-amber-50 text-amber-700 border border-amber-200 text-xs px-2.5 py-1 rounded-full font-medium"
             >
-              <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
+              <ShieldCheck className="w-3.5 h-3.5 text-amber-600" />
               <span>مدیریت</span>
             </button>
-          ) : (
-            <div className="hidden sm:flex items-center gap-1 text-xs text-emerald-200 bg-emerald-900/50 px-2 py-1 rounded-md">
-              <Store className="w-3.5 h-3.5 text-emerald-400" />
-              <span className="truncate max-w-[100px]">{currentCustomer.storeName}</span>
-            </div>
-          )}
+          ) : null}
+        </div>
 
-          {/* Cart Icon */}
+        {/* Center column: logo, always visible and centered */}
+        <div className="flex items-center justify-center">
+          <div
+            onClick={() => navigateTo('home')}
+            className="flex items-center cursor-pointer"
+          >
+            <SeylanehLogo className="h-8" />
+          </div>
+        </div>
+
+        {/* Left column: notification, orders, profile, cart */}
+        <div className="flex items-center justify-end gap-1">
+          <button
+            onClick={() => navigateTo('account')}
+            className="p-2 rounded-xl text-slate-600 hover:bg-slate-100 active:scale-95 transition-all"
+            aria-label="اعلان‌ها"
+          >
+            <Bell className="w-5 h-5" />
+          </button>
+
+          <button
+            onClick={() => navigateTo('my-orders')}
+            className="p-2 rounded-xl text-slate-600 hover:bg-slate-100 active:scale-95 transition-all"
+            aria-label="سفارشات"
+          >
+            <ClipboardList className="w-5 h-5" />
+          </button>
+
+          <button
+            onClick={() => navigateTo('account')}
+            className="p-2 rounded-xl text-slate-600 hover:bg-slate-100 active:scale-95 transition-all"
+            aria-label="حساب کاربری"
+          >
+            <User className="w-5 h-5" />
+          </button>
+
           <button
             onClick={() => navigateTo('cart')}
-            className="relative p-2 rounded-xl bg-emerald-900/70 border border-emerald-800 hover:bg-emerald-800 text-white active:scale-95 transition-all"
+            className="relative p-2 rounded-xl text-slate-600 hover:bg-slate-100 active:scale-95 transition-all"
             aria-label="سبد خرید"
           >
-            <ShoppingBag className="w-5 h-5 text-emerald-100" />
+            <ShoppingBag className="w-5 h-5" />
             {cartTotalCount > 0 && (
-              <span className="absolute -top-1.5 -right-1.5 bg-emerald-500 text-emerald-950 text-[11px] font-extrabold w-5 h-5 rounded-full flex items-center justify-center border-2 border-emerald-950 shadow-sm animate-pulse">
+              <span className="absolute -top-1 -right-1 bg-emerald-600 text-white text-[10px] font-extrabold min-w-[18px] h-[18px] px-0.5 rounded-full flex items-center justify-center border-2 border-white shadow-sm">
                 {toPersianDigits(cartTotalCount)}
               </span>
             )}

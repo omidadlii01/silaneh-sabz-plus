@@ -11,6 +11,12 @@ import {
   Clock,
   Package,
   AlertTriangle,
+  Baby,
+  Heart,
+  Smile,
+  Scissors,
+  Droplet,
+  Grip,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { ProductCard } from '../components/ProductCard';
@@ -61,6 +67,38 @@ const BrandCardButton: React.FC<BrandCardButtonProps> = ({ brand, onClick }) => 
   );
 };
 
+// The 6 fixed product categories shown as quick-access buttons on the home
+// screen (mirrors the values written into products.category by migration
+// 0013_six_categories.sql — keep this list in sync with that migration).
+const HOME_CATEGORIES: { name: string; icon: React.FC<{ className?: string }> }[] = [
+  { name: 'مراقبت از کودک', icon: Baby },
+  { name: 'زیبایی و آرایش بانوان', icon: Sparkles },
+  { name: 'بهداشت و مراقبت‌های جنسی', icon: Heart },
+  { name: 'بهداشت دهان و دندان', icon: Smile },
+  { name: 'مراقبت مو', icon: Scissors },
+  { name: 'مراقبت پوست و بدن', icon: Droplet },
+];
+
+interface CategoryButtonProps {
+  name: string;
+  icon: React.FC<{ className?: string }>;
+  onClick: () => void;
+}
+
+const CategoryButton: React.FC<CategoryButtonProps> = ({ name, icon: Icon, onClick }) => (
+  <button
+    onClick={onClick}
+    className="flex flex-col items-center justify-start gap-1.5 active:scale-95 transition-transform"
+  >
+    <div className="w-14 h-14 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center shadow-2xs">
+      <Icon className="w-6 h-6 text-emerald-700" />
+    </div>
+    <span className="text-[10.5px] font-bold text-slate-700 text-center leading-tight max-w-[64px]">
+      {name}
+    </span>
+  </button>
+);
+
 export const HomeView: React.FC = () => {
   const {
     currentCustomer,
@@ -74,16 +112,6 @@ export const HomeView: React.FC = () => {
     isLoadingCatalog,
     retryLoadCatalog,
   } = useApp();
-
-  const [searchQuery, setSearchQuery] = useState('');
-
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      updateFilter('searchQuery', searchQuery);
-      navigateTo('products');
-    }
-  };
 
   const handleBrandClick = (brandName: string) => {
     updateFilter('brand', brandName);
@@ -127,51 +155,53 @@ export const HomeView: React.FC = () => {
         </div>
       )}
 
-      {/* Greeting Banner */}
-      <div className="bg-gradient-to-l from-emerald-900 to-emerald-800 text-white p-4 rounded-2xl shadow-sm relative overflow-hidden">
-        <div className="relative z-10">
-          <span className="text-emerald-300 text-xs font-semibold">خوش آمدید 👋</span>
-          <h2 className="text-base font-extrabold mt-0.5">{currentCustomer.storeName}</h2>
-          <p className="text-[11px] text-emerald-100/90 mt-1">
-            کد مشتری: {currentCustomer.code} | ویزیتور: {currentCustomer.marketerName}
-          </p>
-        </div>
-
-        {/* Quick Reorder Floating Banner if last order exists */}
-        {mostRecentOrder && (
-          <div className="mt-3.5 pt-3 border-t border-emerald-700/60 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <RotateCcw className="w-4 h-4 text-emerald-300 animate-spin-slow" />
-              <span className="text-xs font-bold text-emerald-50">تکرار سفارش قبلی</span>
-            </div>
-            <button
-              onClick={() => reorder(mostRecentOrder)}
-              className="bg-emerald-400 hover:bg-emerald-300 text-emerald-950 text-xs font-extrabold px-3 py-1.5 rounded-xl shadow-xs active:scale-95 transition-all flex items-center gap-1"
-            >
-              <span>ثبت مجدد ({toPersianDigits(mostRecentOrder.items.length)} کالا)</span>
-              <ArrowLeft className="w-3.5 h-3.5" />
-            </button>
+      {/* Quick Reorder — kept as a slim bar (no green welcome card) so the
+          reorder shortcut is still reachable, without the previous full-width
+          green banner. */}
+      {mostRecentOrder && (
+        <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-2.5 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <RotateCcw className="w-4 h-4 text-emerald-700" />
+            <span className="text-xs font-bold text-emerald-900">تکرار سفارش قبلی</span>
           </div>
-        )}
-      </div>
+          <button
+            onClick={() => reorder(mostRecentOrder)}
+            className="bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-extrabold px-3 py-1.5 rounded-xl shadow-xs active:scale-95 transition-all flex items-center gap-1"
+          >
+            <span>ثبت مجدد ({toPersianDigits(mostRecentOrder.items.length)} کالا)</span>
+            <ArrowLeft className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
 
-      {/* Quick Search Bar */}
-      <form onSubmit={handleSearchSubmit} className="relative">
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="جستجوی نام محصول، برند، کد کالا..."
-          className="w-full bg-white border border-slate-200 rounded-2xl py-3 pr-10 pl-12 text-xs font-medium text-slate-800 shadow-xs focus:outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20"
-        />
-        <Search className="w-4 h-4 text-slate-400 absolute right-3.5 top-3.5" />
-        <button
-          type="submit"
-          className="absolute left-2 top-2 bg-emerald-800 text-white text-xs font-bold px-3 py-1.5 rounded-xl hover:bg-emerald-900 transition-colors"
-        >
-          جستجو
-        </button>
-      </form>
+      {/* Search bar — styled per brand: "سیلانه سبز" in bold green.
+          Acts as a button (navigates to the search/products screen) rather
+          than a live input, matching the reference design. */}
+      <button
+        onClick={() => navigateTo('products')}
+        className="w-full flex items-center gap-2.5 bg-slate-100 border border-slate-200 rounded-2xl py-3 px-3.5 text-xs font-medium text-slate-500 active:scale-[0.99] transition-transform"
+      >
+        <Search className="w-4 h-4 text-slate-400 shrink-0" />
+        <span>
+          جست‌وجو در{' '}
+          <span className="font-extrabold text-emerald-700">سیلانه سبز</span>
+        </span>
+      </button>
+
+      {/* Category Quick-Access Grid */}
+      <div className="grid grid-cols-3 gap-y-3 gap-x-1">
+        {HOME_CATEGORIES.map((cat) => (
+          <CategoryButton
+            key={cat.name}
+            name={cat.name}
+            icon={cat.icon}
+            onClick={() => {
+              updateFilter('category', cat.name);
+              navigateTo('products');
+            }}
+          />
+        ))}
+      </div>
 
       {/* Brands Horizontal Carousel / Grid */}
       <div>
