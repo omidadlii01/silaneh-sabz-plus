@@ -16,6 +16,7 @@ import {
   INITIAL_PRODUCTS,
 } from '../mockData';
 import { apiSignup, apiLogin, apiGetOrders, apiCreateOrder, apiGetProducts, apiGetBrands } from '../api';
+import { toPersianDigits } from '../utils';
 
 interface AppContextType {
   // Navigation & User
@@ -52,6 +53,9 @@ interface AppContextType {
   // Data Collections
   products: Product[];
   brands: Brand[];
+  catalogError: boolean;
+  isLoadingCatalog: boolean;
+  retryLoadCatalog: () => void;
   orders: Order[];
   customers: Customer[];
   selectedProduct: Product | null;
@@ -130,28 +134,47 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [lastSubmittedOrder, setLastSubmittedOrder] = useState<Order | null>(null);
 
   const [filters, setFilters] = useState<FilterOptions>(DEFAULT_FILTERS);
+  const [catalogError, setCatalogError] = useState(false);
+  const [isLoadingCatalog, setIsLoadingCatalog] = useState(true);
+  const [catalogRetryToken, setCatalogRetryToken] = useState(0);
+
+  const retryLoadCatalog = () => setCatalogRetryToken((t) => t + 1);
 
   // Load the real product/brand catalog from the Cloudflare Worker API,
   // replacing the placeholder mock data. Products without an approved image
   // yet are held back from the customer-facing app until an image is added
   // in the admin panel.
+  //
+  // IMPORTANT: on failure (e.g. the device can't reach the Worker API —
+  // this has happened for users where the workers.dev domain is blocked
+  // without a VPN), we used to silently keep whatever was already loaded,
+  // which on first load is the small placeholder mock catalog (~11 demo
+  // products). The app would then look "broken" — missing products, missing
+  // images, category taps not matching — with zero indication to the user
+  // that this was a connectivity problem rather than an app bug. We now
+  // surface a real, visible error + retry instead of silently degrading.
   useEffect(() => {
     let cancelled = false;
+    setIsLoadingCatalog(true);
     (async () => {
       try {
         const [apiProducts, apiBrands] = await Promise.all([apiGetProducts(), apiGetBrands()]);
         if (cancelled) return;
         setProducts(apiProducts.filter((p) => !!p.imageUrl));
         if (apiBrands.length > 0) setBrands(apiBrands);
+        setCatalogError(false);
       } catch (err) {
-        // Network/API failure: keep whatever was already loaded (mock data on first load)
+        if (cancelled) return;
         console.error('Failed to load products/brands from API', err);
+        setCatalogError(true);
+      } finally {
+        if (!cancelled) setIsLoadingCatalog(false);
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [catalogRetryToken]);
 
   // Navigation logic
   const navigateTo = (screen: ViewScreen, params?: { product?: Product; order?: Order }) => {
@@ -364,12 +387,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Reorder functionality: adds all products from order back to cart
   const reorder = (order: Order) => {
+    let skippedCount = 0;
     order.items.forEach((item) => {
       const prod = products.find((p) => p.id === item.productId);
       if (prod && prod.inStock) {
         addToCart(prod, item.quantity);
+      } else {
+        // Product no longer exists in the currently loaded catalog (removed,
+        // out of stock, or the catalog failed to load) — previously this was
+        // silently dropped with no indication to the user of a partial reorder.
+        skippedCount += 1;
       }
     });
+    if (skippedCount > 0) {
+      window.alert(
+        `${toPersianDigits(skippedCount)} کالا از سفارش قبلی دیگر موجود نیست و به سبد خرید اضافه نشد.`,
+      );
+    }
     navigateTo('cart');
   };
 
@@ -433,6 +467,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         cartFinalAmount,
         products,
         brands,
+        catalogError,
+        isLoadingCatalog,
+        retryLoadCatalog,
         orders,
         customers,
         selectedProduct,

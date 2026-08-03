@@ -10,6 +10,7 @@ import {
   CheckCircle2,
   Clock,
   Package,
+  AlertTriangle,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { ProductCard } from '../components/ProductCard';
@@ -69,6 +70,9 @@ export const HomeView: React.FC = () => {
     navigateTo,
     updateFilter,
     reorder,
+    catalogError,
+    isLoadingCatalog,
+    retryLoadCatalog,
   } = useApp();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -100,6 +104,29 @@ export const HomeView: React.FC = () => {
   return (
     <div className="pb-20 pt-3 px-3 sm:px-4 max-w-md mx-auto space-y-5">
       <AppBanner />
+
+      {/* Catalog load error — shown instead of silently displaying the
+          small placeholder demo catalog when the API is unreachable
+          (e.g. the device can't reach the Worker without a VPN). */}
+      {catalogError && (
+        <div className="bg-rose-50 border border-rose-200 text-rose-800 rounded-2xl p-3.5 flex items-start gap-2.5">
+          <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="text-xs font-extrabold">اتصال به سرور محصولات برقرار نشد</p>
+            <p className="text-[11px] text-rose-700 mt-0.5">
+              محصولات و برندهای نمایش داده‌شده ممکن است کامل/به‌روز نباشند. لطفاً اتصال اینترنت (یا فیلترشکن) خود را بررسی کنید.
+            </p>
+            <button
+              onClick={retryLoadCatalog}
+              disabled={isLoadingCatalog}
+              className="mt-2 text-[11px] font-bold text-white bg-rose-600 hover:bg-rose-700 disabled:opacity-60 px-3 py-1.5 rounded-lg transition-colors"
+            >
+              {isLoadingCatalog ? 'در حال تلاش مجدد...' : 'تلاش مجدد'}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Greeting Banner */}
       <div className="bg-gradient-to-l from-emerald-900 to-emerald-800 text-white p-4 rounded-2xl shadow-sm relative overflow-hidden">
         <div className="relative z-10">
