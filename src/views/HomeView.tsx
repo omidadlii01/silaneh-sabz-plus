@@ -88,16 +88,15 @@ interface CategoryButtonProps {
 const CategoryButton: React.FC<CategoryButtonProps> = ({ name, icon: Icon, onClick }) => (
   <button
     onClick={onClick}
-    className="flex flex-col items-center justify-start gap-1.5 active:scale-95 transition-transform"
+    className="flex flex-col items-center gap-1.5 active:scale-95 transition-transform group"
   >
-    {/* Icon enclosure: transparent/white surface with a thin ring only —
-        no solid color fill behind the icon — and a crisp vector icon
-        (no rasterized/pixelated artwork) for the sharpest possible render
-        at any screen density. */}
-    <div className="w-14 h-14 rounded-2xl bg-white border border-emerald-200 flex items-center justify-center shadow-2xs">
-      <Icon className="w-7 h-7 text-emerald-700" strokeWidth={1.75} />
+    {/* Square "bento" tile: soft green-tinted glass surface (not a solid
+        color fill) with a thin ring — matches the reference design's
+        aspect-square category tiles — housing a crisp, large vector icon. */}
+    <div className="aspect-square w-full rounded-2xl bg-emerald-50/60 backdrop-blur-sm border border-emerald-600/15 flex items-center justify-center p-3.5 shadow-2xs group-hover:bg-emerald-50 transition-colors">
+      <Icon className="w-full h-full text-emerald-700" strokeWidth={1.5} />
     </div>
-    <span className="text-[10.5px] font-bold text-slate-700 text-center leading-tight max-w-[64px]">
+    <span className="text-[10.5px] font-bold text-slate-700 text-center leading-tight">
       {name}
     </span>
   </button>
@@ -105,17 +104,19 @@ const CategoryButton: React.FC<CategoryButtonProps> = ({ name, icon: Icon, onCli
 
 // ---- Promo Carousel -------------------------------------------------------
 // 3 auto-rotating promotional slides (advance every 5s) built from real,
-// live app data (special offers count, top category, brand count) rather
-// than placeholder/static copy, so the carousel never goes stale.
+// live app data — each slide shows an actual product/brand photo from the
+// catalog (not a flat icon-on-color block), matching the reference design's
+// "Weekly Offer" card (photo on one side, copy + CTA on the other).
 
 interface PromoSlide {
   key: string;
-  gradient: string;
+  tint: string; // light gradient background classes
+  imageUrl?: string;
+  fallbackIcon: React.FC<{ className?: string; strokeWidth?: number }>;
   eyebrow: string;
   title: string;
-  subtitle: string;
+  highlight: string; // large emphasized line, e.g. "تا ۳۴٪ سود"
   cta: string;
-  icon: React.FC<{ className?: string; strokeWidth?: number }>;
   onClick: () => void;
 }
 
@@ -123,6 +124,7 @@ const PROMO_INTERVAL_MS = 5000;
 
 const PromoCarousel: React.FC<{ slides: PromoSlide[] }> = ({ slides }) => {
   const [index, setIndex] = useState(0);
+  const [imgError, setImgError] = useState(false);
 
   // Auto-advance every 5 seconds. Reset/clear the timer whenever the slide
   // set changes so we never leak intervals or advance past the end.
@@ -139,36 +141,48 @@ const PromoCarousel: React.FC<{ slides: PromoSlide[] }> = ({ slides }) => {
     if (index >= slides.length && slides.length > 0) setIndex(0);
   }, [slides.length, index]);
 
+  useEffect(() => setImgError(false), [index]);
+
   if (slides.length === 0) return null;
   const slide = slides[Math.min(index, slides.length - 1)];
-  const Icon = slide.icon;
+  const FallbackIcon = slide.fallbackIcon;
 
   return (
     <div>
       <div
         onClick={slide.onClick}
-        className={`relative overflow-hidden rounded-2xl h-32 p-4 flex items-center gap-3 cursor-pointer active:scale-[0.99] transition-transform shadow-sm bg-gradient-to-l ${slide.gradient}`}
+        className={`rounded-[20px] p-3.5 flex items-center gap-3.5 cursor-pointer active:scale-[0.99] transition-transform shadow-sm border border-emerald-900/5 bg-gradient-to-l ${slide.tint}`}
       >
-        <div className="relative z-10 flex-1 min-w-0">
-          <span className="text-[10px] font-extrabold text-white/80 tracking-wide">
+        {/* Real product/brand photo, not a flat color block */}
+        <div className="w-24 h-24 shrink-0 bg-white rounded-xl border border-emerald-900/10 shadow-2xs overflow-hidden flex items-center justify-center p-2">
+          {slide.imageUrl && !imgError ? (
+            <img
+              src={resolveAssetUrl(slide.imageUrl)}
+              alt={slide.title}
+              onError={() => setImgError(true)}
+              referrerPolicy="no-referrer"
+              className="w-full h-full object-contain"
+            />
+          ) : (
+            <FallbackIcon className="w-10 h-10 text-emerald-600" strokeWidth={1.5} />
+          )}
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <span className="text-[10px] font-extrabold text-emerald-700/80 tracking-wide">
             {slide.eyebrow}
           </span>
-          <h3 className="text-sm font-black text-white mt-0.5 leading-snug">
+          <h3 className="text-[13px] font-black text-emerald-950 mt-0.5 leading-snug line-clamp-1">
             {slide.title}
           </h3>
-          <p className="text-[11px] text-white/85 mt-1 leading-relaxed line-clamp-2">
-            {slide.subtitle}
-          </p>
-          <span className="inline-flex items-center gap-1 mt-2 text-[10.5px] font-extrabold text-white bg-white/20 backdrop-blur-sm px-2.5 py-1 rounded-full">
+          <div className="text-emerald-700 font-black text-[15px] mt-0.5">
+            {slide.highlight}
+          </div>
+          <span className="inline-flex items-center gap-1 mt-2 text-[10.5px] font-extrabold text-white bg-emerald-900 px-3 py-1.5 rounded-full">
             {slide.cta}
             <ChevronLeft className="w-3 h-3" />
           </span>
         </div>
-        <div className="relative z-10 w-16 h-16 rounded-2xl bg-white/15 flex items-center justify-center shrink-0">
-          <Icon className="w-8 h-8 text-white" strokeWidth={1.6} />
-        </div>
-        {/* Decorative soft circle for depth, matches the "clinical/tonal" elevation style */}
-        <div className="absolute -left-6 -bottom-8 w-28 h-28 rounded-full bg-white/10 pointer-events-none" />
       </div>
 
       {/* Pagination Dots */}
@@ -269,18 +283,22 @@ export const HomeView: React.FC = () => {
   const topCategory = rankedCategories[0];
 
   // ---- 3 auto-rotating promo slides (every 5s) — built from live catalog
-  // data so copy never drifts from what's actually in the store. ----
+  // data, each backed by a real photo (product/brand) from the catalog. ----
   const promoSlides: PromoSlide[] = [];
 
   if (specialOfferProducts.length > 0) {
+    const bestDiscount = Math.max(
+      ...specialOfferProducts.map((p) => p.discountPercentage || 0),
+    );
     promoSlides.push({
       key: 'special-offers',
-      gradient: 'from-rose-600 to-rose-700',
+      tint: 'from-rose-50 to-orange-50',
+      imageUrl: specialOfferProducts[0].imageUrl,
+      fallbackIcon: Flame,
       eyebrow: 'پیشنهاد این هفته',
-      title: `${toPersianDigits(specialOfferProducts.length)} کالا با تخفیف ویژه همکاری`,
-      subtitle: 'فرصت محدود برای سفارش عمده با بیشترین سود',
+      title: `${toPersianDigits(specialOfferProducts.length)} کالا با تخفیف ویژه`,
+      highlight: bestDiscount > 0 ? `تا ${toPersianDigits(bestDiscount)}٪ سود` : 'فرصت محدود همکاری',
       cta: 'مشاهده تخفیف‌ها',
-      icon: Flame,
       onClick: () => {
         updateFilter('specialOfferOnly', true);
         navigateTo('products');
@@ -289,14 +307,16 @@ export const HomeView: React.FC = () => {
   }
 
   if (topCategory) {
+    const topCategoryProduct = products.find((p) => p.category === topCategory.name);
     promoSlides.push({
       key: 'top-category',
-      gradient: 'from-emerald-700 to-emerald-800',
+      tint: 'from-emerald-50 to-teal-50',
+      imageUrl: topCategoryProduct?.imageUrl,
+      fallbackIcon: topCategory.icon,
       eyebrow: 'پرطرفدارترین دسته',
       title: topCategory.name,
-      subtitle: `${toPersianDigits(topCategory.count)} کالای متنوع آماده سفارش عمده`,
+      highlight: `${toPersianDigits(topCategory.count)} کالای متنوع`,
       cta: 'مشاهده محصولات',
-      icon: topCategory.icon,
       onClick: () => {
         updateFilter('category', topCategory.name);
         navigateTo('products');
@@ -307,12 +327,13 @@ export const HomeView: React.FC = () => {
   if (brands.length > 0) {
     promoSlides.push({
       key: 'brands',
-      gradient: 'from-teal-600 to-emerald-800',
+      tint: 'from-teal-50 to-emerald-50',
+      imageUrl: brands[0]?.imageUrl,
+      fallbackIcon: Award,
       eyebrow: 'اعتبار سیلانه سبز',
-      title: `${toPersianDigits(brands.length)} برند معتبر، زیر یک سقف`,
-      subtitle: 'همه برندهای مورد اعتماد داروخانه‌ها و فروشگاه‌ها',
+      title: 'برندهای معتبر، زیر یک سقف',
+      highlight: `${toPersianDigits(brands.length)} برند`,
       cta: 'مشاهده برندها',
-      icon: Award,
       onClick: () => {
         updateFilter('brand', 'همه');
         navigateTo('products');
@@ -387,7 +408,7 @@ export const HomeView: React.FC = () => {
       </button>
 
       {/* Category Quick-Access Grid */}
-      <div className="grid grid-cols-3 gap-y-3 gap-x-1">
+      <div className="grid grid-cols-3 gap-3">
         {HOME_CATEGORIES.map((cat) => (
           <CategoryButton
             key={cat.name}
