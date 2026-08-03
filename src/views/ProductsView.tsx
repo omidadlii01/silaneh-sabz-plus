@@ -1,10 +1,16 @@
 import React, { useMemo } from 'react';
-import { Search, Filter, RotateCcw, Check, Sparkles, Flame, CheckCircle2 } from 'lucide-react';
+import { Search, Filter, RotateCcw, Check, Sparkles, Flame, CheckCircle2, ArrowRight } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { ProductCard } from '../components/ProductCard';
+import { toPersianDigits } from '../utils';
 
 export const ProductsView: React.FC = () => {
   const { products, brands, filters, updateFilter, resetFilters } = useApp();
+
+  // When a specific brand is selected (e.g. tapped from the brand grid on
+  // Home), this becomes a dedicated "brand page": no global search box, no
+  // brand tabs, no category tabs — just that brand's products, per request.
+  const isBrandView = filters.brand !== 'همه';
 
   // Distinct Categories list from products
   const categories = useMemo(() => {
@@ -50,100 +56,124 @@ export const ProductsView: React.FC = () => {
     <div className="pb-20 pt-3 px-3 sm:px-4 max-w-md mx-auto space-y-3.5">
       {/* Header & Title */}
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-base font-extrabold text-slate-900">کاتالوگ محصولات عمده</h2>
-          <p className="text-[11px] text-slate-500">لیست قیمت و موجودی انبار سیلانه سبز</p>
+        <div className="flex items-center gap-2">
+          {isBrandView && (
+            <button
+              onClick={resetFilters}
+              className="w-7 h-7 flex items-center justify-center rounded-full bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
+              aria-label="بازگشت"
+            >
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          )}
+          <div>
+            <h2 className="text-base font-extrabold text-slate-900">
+              {isBrandView ? `محصولات ${filters.brand}` : 'کاتالوگ محصولات عمده'}
+            </h2>
+            <p className="text-[11px] text-slate-500">
+              {isBrandView
+                ? `${toPersianDigits(filteredProducts.length)} کالا`
+                : 'لیست قیمت و موجودی انبار سیلانه سبز'}
+            </p>
+          </div>
         </div>
 
-        {(filters.brand !== 'همه' ||
-          filters.category !== 'همه' ||
-          filters.inStockOnly ||
-          filters.specialOfferOnly ||
-          filters.isNewOnly ||
-          filters.searchQuery) && (
-          <button
-            onClick={resetFilters}
-            className="flex items-center gap-1 text-[11px] font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 px-2.5 py-1 rounded-xl border border-rose-200"
-          >
-            <RotateCcw className="w-3 h-3" />
-            <span>حذف فیلترها</span>
-          </button>
-        )}
+        {!isBrandView &&
+          (filters.brand !== 'همه' ||
+            filters.category !== 'همه' ||
+            filters.inStockOnly ||
+            filters.specialOfferOnly ||
+            filters.isNewOnly ||
+            filters.searchQuery) && (
+            <button
+              onClick={resetFilters}
+              className="flex items-center gap-1 text-[11px] font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 px-2.5 py-1 rounded-xl border border-rose-200"
+            >
+              <RotateCcw className="w-3 h-3" />
+              <span>حذف فیلترها</span>
+            </button>
+          )}
       </div>
 
       {/* Search Bar */}
-      <div className="relative">
-        <input
-          type="text"
-          value={filters.searchQuery}
-          onChange={(e) => updateFilter('searchQuery', e.target.value)}
-          placeholder="جستجو بر اساس نام محصول، برند یا کد کالا..."
-          className="w-full bg-white border border-slate-200 rounded-2xl py-2.5 pr-10 pl-4 text-xs font-medium text-slate-800 shadow-2xs focus:outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20"
-        />
-        <Search className="w-4 h-4 text-slate-400 absolute right-3.5 top-3" />
-      </div>
+      {!isBrandView && (
+        <div className="relative">
+          <input
+            type="text"
+            value={filters.searchQuery}
+            onChange={(e) => updateFilter('searchQuery', e.target.value)}
+            placeholder="جستجو بر اساس نام محصول، برند یا کد کالا..."
+            className="w-full bg-white border border-slate-200 rounded-2xl py-2.5 pr-10 pl-4 text-xs font-medium text-slate-800 shadow-2xs focus:outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20"
+          />
+          <Search className="w-4 h-4 text-slate-400 absolute right-3.5 top-3" />
+        </div>
+      )}
 
       {/* Brand Horizontal Filter Tabs */}
-      <div>
-        <span className="text-[11px] font-bold text-slate-500 mb-1.5 block">فیلتر برند:</span>
-        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 -mx-3 px-3">
-          <button
-            onClick={() => updateFilter('brand', 'همه')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap border ${
-              filters.brand === 'همه'
-                ? 'bg-emerald-800 text-white border-emerald-800 shadow-2xs'
-                : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
-            }`}
-          >
-            همه برندها
-          </button>
-
-          {brands.map((b) => (
+      {!isBrandView && (
+        <div>
+          <span className="text-[11px] font-bold text-slate-500 mb-1.5 block">فیلتر برند:</span>
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 -mx-3 px-3">
             <button
-              key={b.id}
-              onClick={() => updateFilter('brand', b.name)}
+              onClick={() => updateFilter('brand', 'همه')}
               className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap border ${
-                filters.brand === b.name
+                filters.brand === 'همه'
                   ? 'bg-emerald-800 text-white border-emerald-800 shadow-2xs'
                   : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
               }`}
             >
-              {b.name}
+              همه برندها
             </button>
-          ))}
+
+            {brands.map((b) => (
+              <button
+                key={b.id}
+                onClick={() => updateFilter('brand', b.name)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap border ${
+                  filters.brand === b.name
+                    ? 'bg-emerald-800 text-white border-emerald-800 shadow-2xs'
+                    : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                }`}
+              >
+                {b.name}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Category Horizontal Filter Tabs */}
-      <div>
-        <span className="text-[11px] font-bold text-slate-500 mb-1.5 block">فیلتر دسته‌بندی:</span>
-        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 -mx-3 px-3">
-          <button
-            onClick={() => updateFilter('category', 'همه')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap border ${
-              filters.category === 'همه'
-                ? 'bg-slate-800 text-white border-slate-800 shadow-2xs'
-                : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
-            }`}
-          >
-            همه دسته‌ها
-          </button>
-
-          {categories.map((cat) => (
+      {!isBrandView && (
+        <div>
+          <span className="text-[11px] font-bold text-slate-500 mb-1.5 block">فیلتر دسته‌بندی:</span>
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 -mx-3 px-3">
             <button
-              key={cat}
-              onClick={() => updateFilter('category', cat)}
+              onClick={() => updateFilter('category', 'همه')}
               className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap border ${
-                filters.category === cat
+                filters.category === 'همه'
                   ? 'bg-slate-800 text-white border-slate-800 shadow-2xs'
                   : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
               }`}
             >
-              {cat}
+              همه دسته‌ها
             </button>
-          ))}
+
+            {categories.map((cat) => (
+              <button
+                key={cat}
+                onClick={() => updateFilter('category', cat)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap border ${
+                  filters.category === cat
+                    ? 'bg-slate-800 text-white border-slate-800 shadow-2xs'
+                    : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Quick Checkbox Filter Chips */}
       <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
