@@ -30,6 +30,26 @@ export const LoginView: React.FC = () => {
   const [signupError, setSignupError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Per-field validation state — only populated after a submit attempt, so
+  // fields aren't highlighted red before the user has tried anything.
+  const [fieldErrors, setFieldErrors] = useState<{
+    ownerName?: string;
+    phone?: string;
+    storeName?: string;
+    agreed?: string;
+  }>({});
+
+  const IRAN_MOBILE_RE = /^0?9\d{9}$/;
+
+  const clearFieldError = (field: 'ownerName' | 'phone' | 'storeName' | 'agreed') => {
+    setFieldErrors((prev) => {
+      if (!prev[field]) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  };
+
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!phoneNumber.trim()) {
@@ -47,16 +67,46 @@ export const LoginView: React.FC = () => {
     }
   };
 
+  // Kept for disabling the submit button, but no longer the sole source of
+  // truth for *why* something is wrong — validateSignupForm() below produces
+  // the actual per-field messages shown to the user.
   const isSignupComplete =
     signupForm.ownerName.trim() &&
     signupForm.phone.trim() &&
     signupForm.storeName.trim() &&
     signupForm.agreed;
 
+  // Validates the current form and returns a map of field -> error message.
+  // Reads straight from signupForm (current state), not from stale closures.
+  const validateSignupForm = () => {
+    const errors: typeof fieldErrors = {};
+    if (!signupForm.ownerName.trim()) {
+      errors.ownerName = 'نام و نام خانوادگی مالک فروشگاه را وارد کنید.';
+    }
+    const phoneDigits = signupForm.phone.trim();
+    if (!phoneDigits) {
+      errors.phone = 'شماره تماس را وارد کنید.';
+    } else if (!IRAN_MOBILE_RE.test(phoneDigits)) {
+      errors.phone = 'شماره موبایل را به‌درستی وارد کنید (مثال: 09123456789).';
+    }
+    if (!signupForm.storeName.trim()) {
+      errors.storeName = 'نام فروشگاه را وارد کنید.';
+    }
+    if (!signupForm.agreed) {
+      errors.agreed = 'برای ادامه باید با قوانین و مقررات موافقت کنید.';
+    }
+    return errors;
+  };
+
   const handleSignupSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isSignupComplete) {
-      setSignupError('لطفاً تمامی فیلدهای الزامی را تکمیل و قوانین را تأیید نمایید.');
+
+    const errors = validateSignupForm();
+    setFieldErrors(errors);
+    if (Object.keys(errors).length > 0) {
+      // Don't show a vague catch-all message — the red-bordered field(s)
+      // above already tell the user exactly what's missing/invalid.
+      setSignupError('');
       return;
     }
 
@@ -78,7 +128,16 @@ export const LoginView: React.FC = () => {
         businessType: signupForm.businessType,
       });
     } catch (err: any) {
-      setSignupError(err?.message || 'خطا در ثبت‌نام. لطفاً دوباره تلاش کنید.');
+      const message: string = err?.message || 'خطا در ثبت‌نام. لطفاً دوباره تلاش کنید.';
+      // The backend returns "شماره موبایل تکراری است" (409) for a phone
+      // that's already registered — surface that specifically on the phone
+      // field too, so it's visually obvious which field caused the problem.
+      if (message.includes('تکراری')) {
+        setFieldErrors((prev) => ({ ...prev, phone: message }));
+        setSignupError('');
+      } else {
+        setSignupError(message);
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -142,9 +201,11 @@ export const LoginView: React.FC = () => {
                 <div className="relative">
                   <input
                     type="tel"
+                    name="login-phone-number"
+                    autoComplete="off"
                     value={phoneNumber}
                     onChange={(e) => setPhoneNumber(e.target.value)}
-                    placeholder="۰۹۱۲ ‑ ‑ ‑ ‑ ‑ ‑ ‑ (نمونه)"
+                    placeholder="0912*******"
                     className="w-full bg-slate-50 border border-slate-300 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20 rounded-xl px-3.5 py-3 pr-10 text-slate-900 text-sm font-semibold tracking-wider placeholder:text-slate-300 placeholder:font-normal outline-none transition-all"
                     dir="ltr"
                   />
@@ -180,11 +241,25 @@ export const LoginView: React.FC = () => {
                 </label>
                 <input
                   type="text"
+                  name="owner-full-name"
+                  autoComplete="off"
+                  autoCorrect="off"
+                  spellCheck={false}
                   value={signupForm.ownerName}
-                  onChange={(e) => setSignupForm({ ...signupForm, ownerName: e.target.value })}
+                  onChange={(e) => {
+                    setSignupForm({ ...signupForm, ownerName: e.target.value });
+                    clearFieldError('ownerName');
+                  }}
                   placeholder="علی رضایی"
-                  className="w-full bg-slate-50 border border-slate-300 focus:border-emerald-600 rounded-xl px-3 py-2.5 text-xs font-semibold text-slate-900 outline-none"
+                  className={`w-full bg-slate-50 border rounded-xl px-3 py-2.5 text-xs font-semibold text-slate-900 outline-none ${
+                    fieldErrors.ownerName
+                      ? 'border-rose-500 focus:border-rose-600 ring-2 ring-rose-500/20'
+                      : 'border-slate-300 focus:border-emerald-600'
+                  }`}
                 />
+                {fieldErrors.ownerName && (
+                  <p className="text-[11px] text-rose-600 font-medium mt-1">{fieldErrors.ownerName}</p>
+                )}
               </div>
 
               {/* Phone Number */}
@@ -195,14 +270,26 @@ export const LoginView: React.FC = () => {
                 <div className="relative">
                   <input
                     type="tel"
+                    name="signup-phone-number"
+                    autoComplete="off"
                     value={signupForm.phone}
-                    onChange={(e) => setSignupForm({ ...signupForm, phone: e.target.value })}
+                    onChange={(e) => {
+                      setSignupForm({ ...signupForm, phone: e.target.value });
+                      clearFieldError('phone');
+                    }}
                     placeholder="۰۹۱۲۳۴۵۶۷۸۹"
-                    className="w-full bg-slate-50 border border-slate-300 focus:border-emerald-600 rounded-xl px-3 py-2.5 pr-9 text-xs font-semibold text-slate-900 outline-none"
+                    className={`w-full bg-slate-50 border rounded-xl px-3 py-2.5 pr-9 text-xs font-semibold text-slate-900 outline-none ${
+                      fieldErrors.phone
+                        ? 'border-rose-500 focus:border-rose-600 ring-2 ring-rose-500/20'
+                        : 'border-slate-300 focus:border-emerald-600'
+                    }`}
                     dir="ltr"
                   />
                   <Phone className="w-4 h-4 text-slate-400 absolute right-2.5 top-3" />
                 </div>
+                {fieldErrors.phone && (
+                  <p className="text-[11px] text-rose-600 font-medium mt-1">{fieldErrors.phone}</p>
+                )}
               </div>
 
               {/* Shop Name */}
@@ -213,13 +300,27 @@ export const LoginView: React.FC = () => {
                 <div className="relative">
                   <input
                     type="text"
+                    name="signup-store-name"
+                    autoComplete="off"
+                    autoCorrect="off"
+                    spellCheck={false}
                     value={signupForm.storeName}
-                    onChange={(e) => setSignupForm({ ...signupForm, storeName: e.target.value })}
+                    onChange={(e) => {
+                      setSignupForm({ ...signupForm, storeName: e.target.value });
+                      clearFieldError('storeName');
+                    }}
                     placeholder="داروخانه دکتر رضایی"
-                    className="w-full bg-slate-50 border border-slate-300 focus:border-emerald-600 rounded-xl px-3 py-2.5 pr-9 text-xs font-semibold text-slate-900 outline-none"
+                    className={`w-full bg-slate-50 border rounded-xl px-3 py-2.5 pr-9 text-xs font-semibold text-slate-900 outline-none ${
+                      fieldErrors.storeName
+                        ? 'border-rose-500 focus:border-rose-600 ring-2 ring-rose-500/20'
+                        : 'border-slate-300 focus:border-emerald-600'
+                    }`}
                   />
                   <Store className="w-4 h-4 text-slate-400 absolute right-2.5 top-3" />
                 </div>
+                {fieldErrors.storeName && (
+                  <p className="text-[11px] text-rose-600 font-medium mt-1">{fieldErrors.storeName}</p>
+                )}
               </div>
 
               {/* Business Type */}
@@ -245,6 +346,8 @@ export const LoginView: React.FC = () => {
                 <label className="block text-[11px] font-bold text-slate-700 mb-1">کد معرف (اختیاری)</label>
                 <input
                   type="text"
+                  name="referral-code"
+                  autoComplete="off"
                   value={signupForm.referralCode}
                   onChange={(e) => setSignupForm({ ...signupForm, referralCode: e.target.value })}
                   placeholder="کد معرف خود را وارد کنید"
@@ -257,13 +360,21 @@ export const LoginView: React.FC = () => {
                 <input
                   type="checkbox"
                   checked={signupForm.agreed}
-                  onChange={(e) => setSignupForm({ ...signupForm, agreed: e.target.checked })}
-                  className="mt-0.5 w-4 h-4 rounded border-slate-300 text-emerald-700 focus:ring-emerald-600"
+                  onChange={(e) => {
+                    setSignupForm({ ...signupForm, agreed: e.target.checked });
+                    clearFieldError('agreed');
+                  }}
+                  className={`mt-0.5 w-4 h-4 rounded text-emerald-700 focus:ring-emerald-600 ${
+                    fieldErrors.agreed ? 'border-rose-500 ring-2 ring-rose-500/20' : 'border-slate-300'
+                  }`}
                 />
                 <span className="text-[11px] font-semibold text-slate-600">
                   با قوانین و مقررات سیلانه سبز موافقم
                 </span>
               </label>
+              {fieldErrors.agreed && (
+                <p className="text-[11px] text-rose-600 font-medium">{fieldErrors.agreed}</p>
+              )}
 
               {signupError && <p className="text-xs text-rose-600 font-medium pt-1">{signupError}</p>}
 
