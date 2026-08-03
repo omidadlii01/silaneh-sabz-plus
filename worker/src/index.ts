@@ -104,7 +104,14 @@ export default {
         const body = await request.json<any>();
         const { firstName, lastName, phone, password, storeName, businessType, address } = body;
 
-        if (!firstName || !lastName || !phone || !storeName || !address) {
+        // NOTE: `address` is intentionally NOT required here. The signup
+        // form was redesigned (2026-08-03) to be simpler and no longer
+        // collects a separate address field — it always sends address: ''.
+        // Requiring it here made EVERY signup fail with a false "اطلاعات
+        // ناقص است" error no matter what the user filled in the form. The
+        // `address` column still allows an empty string (it's NOT NULL,
+        // not NOT NULL-and-non-empty), so this is safe.
+        if (!firstName || !lastName || !phone || !storeName) {
           return json({ error: 'اطلاعات ناقص است.' }, 400);
         }
 
