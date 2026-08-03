@@ -14,15 +14,18 @@ import {
   Smile,
   Scissors,
   Droplet,
-  Truck,
+  Plus,
+  Box,
+  Gift,
   BadgePercent,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { ProductCard } from '../components/ProductCard';
 import { StatusBadge } from '../components/StatusBadge';
 import { AppBanner } from '../components/AppBanner';
 import { Product } from '../types';
 import { formatCurrency, toPersianDigits, resolveAssetUrl } from '../utils';
+
+// ---- Brand tile -------------------------------------------------------
 
 interface BrandCardButtonProps {
   brand: any;
@@ -67,9 +70,10 @@ const BrandCardButton: React.FC<BrandCardButtonProps> = ({ brand, onClick }) => 
   );
 };
 
-// The 6 fixed product categories shown as quick-access buttons on the home
-// screen (mirrors the values written into products.category by migration
-// 0013_six_categories.sql — keep this list in sync with that migration).
+// ---- Category quick-access grid ----------------------------------------
+// The 6 fixed product categories (mirrors products.category values written
+// by migration 0013_six_categories.sql — keep this list in sync with that
+// migration).
 const HOME_CATEGORIES: { name: string; icon: React.FC<{ className?: string }> }[] = [
   { name: 'مراقبت از کودک', icon: Baby },
   { name: 'زیبایی و آرایش بانوان', icon: Sparkles },
@@ -90,10 +94,7 @@ const CategoryButton: React.FC<CategoryButtonProps> = ({ name, icon: Icon, onCli
     onClick={onClick}
     className="flex flex-col items-center gap-1.5 active:scale-95 transition-transform group"
   >
-    {/* Square "bento" tile: soft green-tinted glass surface (not a solid
-        color fill) with a thin ring — matches the reference design's
-        aspect-square category tiles — housing a crisp, large vector icon. */}
-    <div className="aspect-square w-full rounded-2xl bg-emerald-50/60 backdrop-blur-sm border border-emerald-600/15 flex items-center justify-center p-3.5 shadow-2xs group-hover:bg-emerald-50 transition-colors">
+    <div className="aspect-square w-full rounded-2xl bg-emerald-50 flex items-center justify-center p-3.5 group-hover:bg-emerald-100/70 transition-colors">
       <Icon className="w-full h-full text-emerald-700" strokeWidth={1.5} />
     </div>
     <span className="text-[10.5px] font-bold text-slate-700 text-center leading-tight">
@@ -102,20 +103,146 @@ const CategoryButton: React.FC<CategoryButtonProps> = ({ name, icon: Icon, onCli
   </button>
 );
 
-// ---- Promo Carousel -------------------------------------------------------
-// 3 auto-rotating promotional slides (advance every 5s) built from real,
-// live app data — each slide shows an actual product/brand photo from the
-// catalog (not a flat icon-on-color block), matching the reference design's
-// "Weekly Offer" card (photo on one side, copy + CTA on the other).
+// ---- Compact product card ------------------------------------------------
+// Matches the reference's horizontally-scrolling item card: floating "+"
+// button (top-left), square photo, name, packaging-spec chip, and a price
+// row with an optional discount pill + consumer price underneath.
+
+interface CompactProductCardProps {
+  product: Product;
+}
+
+const CompactProductCard: React.FC<CompactProductCardProps> = ({ product }) => {
+  const { cart, addToCart, navigateTo } = useApp();
+  const [imgError, setImgError] = useState(false);
+  const cartItem = cart.find((item) => item.product.id === product.id);
+  const qty = cartItem ? cartItem.quantity : 0;
+
+  return (
+    <div className="min-w-[152px] w-[152px] shrink-0 bg-white border border-slate-200/70 rounded-2xl p-2.5 flex flex-col gap-1.5 relative text-right">
+      <button
+        onClick={() => product.inStock && addToCart(product, 1)}
+        disabled={!product.inStock}
+        className="absolute top-2 left-2 z-10 w-7 h-7 bg-white border border-slate-200 rounded-lg flex items-center justify-center shadow-2xs active:scale-90 transition-transform disabled:opacity-40"
+        aria-label="افزودن کارتن"
+      >
+        <Plus className="w-3.5 h-3.5 text-emerald-700" />
+        {qty > 0 && (
+          <span className="absolute -top-1.5 -right-1.5 bg-emerald-700 text-white text-[8.5px] font-black min-w-[16px] h-4 px-0.5 rounded-full flex items-center justify-center border border-white">
+            {toPersianDigits(qty)}
+          </span>
+        )}
+      </button>
+
+      <div
+        onClick={() => navigateTo('product-detail', { product })}
+        className="aspect-square w-full flex items-center justify-center cursor-pointer"
+      >
+        {product.imageUrl && !imgError ? (
+          <img
+            src={resolveAssetUrl(product.imageUrl)}
+            alt={product.name}
+            onError={() => setImgError(true)}
+            referrerPolicy="no-referrer"
+            className="h-full w-auto object-contain"
+            loading="lazy"
+          />
+        ) : (
+          <div className="w-full h-full rounded-xl bg-slate-50 flex items-center justify-center">
+            <Box className="w-8 h-8 text-slate-300" />
+          </div>
+        )}
+      </div>
+
+      <span className="text-[11px] font-bold text-slate-800 leading-snug line-clamp-2 min-h-[30px]">
+        {product.name}
+      </span>
+
+      <div className="flex items-center gap-1 text-slate-400 text-[10px]">
+        <Box className="w-3 h-3" />
+        <span>{toPersianDigits(product.cartonQuantity)} عدد</span>
+      </div>
+
+      {!product.inStock ? (
+        <span className="text-[10px] font-bold text-rose-600 mt-0.5">ناموجود</span>
+      ) : (
+        <div className="mt-0.5">
+          <div className="flex items-center justify-between gap-1">
+            <span className="text-emerald-900 font-black text-[12.5px]">
+              {formatCurrency(product.price)}
+            </span>
+            {!!product.discountPercentage && (
+              <span className="bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded text-[9.5px] font-bold shrink-0">
+                {toPersianDigits(product.discountPercentage)}٪
+              </span>
+            )}
+          </div>
+          {product.unitPrice > 0 && (
+            <span className="text-[9px] text-slate-400 block mt-0.5">
+              مصرف‌کننده: {formatCurrency(product.unitPrice)}
+            </span>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ---- Horizontal product row (Popular items / per-category sections) ------
+
+interface ProductRowProps {
+  title: string;
+  icon: React.FC<{ className?: string }>;
+  products: Product[];
+  onSeeAll: () => void;
+  accentColor?: string;
+}
+
+const ProductRow: React.FC<ProductRowProps> = ({
+  title,
+  icon: Icon,
+  products,
+  onSeeAll,
+  accentColor = 'text-emerald-700',
+}) => {
+  if (products.length === 0) return null;
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-2.5">
+        <div className="flex items-center gap-1.5">
+          <h2 className="text-[13.5px] font-extrabold text-emerald-950">{title}</h2>
+          <Icon className={`w-4 h-4 ${accentColor}`} />
+        </div>
+        <button
+          onClick={onSeeAll}
+          className="text-[11px] font-bold text-emerald-700 flex items-center hover:underline"
+        >
+          <span>مشاهده همه</span>
+          <ChevronLeft className="w-3.5 h-3.5" />
+        </button>
+      </div>
+      <div className="flex gap-2.5 overflow-x-auto no-scrollbar pb-1 -mx-3 px-3">
+        {products.map((product) => (
+          <CompactProductCard key={product.id} product={product} />
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// ---- Weekly-offer promo carousel ------------------------------------------
+// 3 auto-rotating slides (advance every 5s), each backed by a real
+// product/brand photo from the catalog — mirrors the reference's "آفر هفته"
+// card (photo on one side, copy + CTA on the other, dots below).
 
 interface PromoSlide {
   key: string;
-  tint: string; // light gradient background classes
+  tint: string;
   imageUrl?: string;
   fallbackIcon: React.FC<{ className?: string; strokeWidth?: number }>;
   eyebrow: string;
   title: string;
-  highlight: string; // large emphasized line, e.g. "تا ۳۴٪ سود"
+  highlight: string;
   cta: string;
   onClick: () => void;
 }
@@ -126,8 +253,6 @@ const PromoCarousel: React.FC<{ slides: PromoSlide[] }> = ({ slides }) => {
   const [index, setIndex] = useState(0);
   const [imgError, setImgError] = useState(false);
 
-  // Auto-advance every 5 seconds. Reset/clear the timer whenever the slide
-  // set changes so we never leak intervals or advance past the end.
   useEffect(() => {
     if (slides.length <= 1) return;
     const id = setInterval(() => {
@@ -136,7 +261,6 @@ const PromoCarousel: React.FC<{ slides: PromoSlide[] }> = ({ slides }) => {
     return () => clearInterval(id);
   }, [slides.length]);
 
-  // Clamp index if the slide list shrinks (e.g. catalog reload).
   useEffect(() => {
     if (index >= slides.length && slides.length > 0) setIndex(0);
   }, [slides.length, index]);
@@ -153,7 +277,6 @@ const PromoCarousel: React.FC<{ slides: PromoSlide[] }> = ({ slides }) => {
         onClick={slide.onClick}
         className={`rounded-[20px] p-3.5 flex items-center gap-3.5 cursor-pointer active:scale-[0.99] transition-transform shadow-sm border border-emerald-900/5 bg-gradient-to-l ${slide.tint}`}
       >
-        {/* Real product/brand photo, not a flat color block */}
         <div className="w-24 h-24 shrink-0 bg-white rounded-xl border border-emerald-900/10 shadow-2xs overflow-hidden flex items-center justify-center p-2">
           {slide.imageUrl && !imgError ? (
             <img
@@ -185,7 +308,6 @@ const PromoCarousel: React.FC<{ slides: PromoSlide[] }> = ({ slides }) => {
         </div>
       </div>
 
-      {/* Pagination Dots */}
       <div className="flex justify-center items-center gap-1.5 mt-2.5">
         {slides.map((s, i) => (
           <button
@@ -202,49 +324,112 @@ const PromoCarousel: React.FC<{ slides: PromoSlide[] }> = ({ slides }) => {
   );
 };
 
-// ---- Category Product Row --------------------------------------------------
-// Horizontally-scrolling row of real products for a given category, mirroring
-// the per-category sections in the design (e.g. "پوست و بدن", "بهداشت و سلامت").
+// ---- Featured-offer block --------------------------------------------------
+// Mirrors the reference's dark-green "Recommended Package" module — a
+// full-bleed emerald box holding a white product card (badge, image, price,
+// action buttons) plus a slim side column. Since the catalog has no
+// bundle/package data model, this is built from the single most-discounted
+// real special-offer product (real name/price/actions) rather than a
+// fabricated multi-item bundle.
 
-interface CategoryProductsRowProps {
-  title: string;
-  icon: React.FC<{ className?: string }>;
-  products: Product[];
-  onSeeAll: () => void;
+interface FeaturedOfferBlockProps {
+  product: Product;
 }
 
-const CategoryProductsRow: React.FC<CategoryProductsRowProps> = ({
-  title,
-  icon: Icon,
-  products,
-  onSeeAll,
-}) => {
-  if (products.length === 0) return null;
+const FeaturedOfferBlock: React.FC<FeaturedOfferBlockProps> = ({ product }) => {
+  const { addToCart, navigateTo } = useApp();
+  const [imgError, setImgError] = useState(false);
+
   return (
-    <div>
-      <div className="flex items-center justify-between mb-2.5">
-        <div className="flex items-center gap-1.5">
-          <Icon className="w-4 h-4 text-emerald-700" />
-          <h3 className="text-xs font-extrabold text-slate-900">{title}</h3>
-        </div>
-        <button
-          onClick={onSeeAll}
-          className="text-[11px] font-bold text-emerald-700 flex items-center hover:underline"
-        >
-          <span>مشاهده همه</span>
-          <ChevronLeft className="w-3.5 h-3.5" />
-        </button>
-      </div>
-      <div className="flex gap-2.5 overflow-x-auto no-scrollbar pb-1 -mx-3 px-3">
-        {products.map((product) => (
-          <div key={product.id} className="w-[168px] shrink-0">
-            <ProductCard product={product} />
+    <div className="bg-emerald-900 rounded-2xl p-2.5 flex gap-2.5">
+      {/* Main product card */}
+      <div className="flex-[3] bg-white rounded-xl p-3 flex flex-col gap-2 relative">
+        {!!product.discountPercentage && (
+          <div className="absolute top-2 left-2 bg-orange-500 text-white px-2.5 py-1 rounded-lg text-[10px] font-bold z-10">
+            {toPersianDigits(product.discountPercentage)}٪ تخفیف
           </div>
-        ))}
+        )}
+
+        <div
+          onClick={() => navigateTo('product-detail', { product })}
+          className="w-full aspect-[4/3] mb-0.5 flex items-center justify-center overflow-hidden rounded-lg bg-slate-50 cursor-pointer"
+        >
+          {product.imageUrl && !imgError ? (
+            <img
+              src={resolveAssetUrl(product.imageUrl)}
+              alt={product.name}
+              onError={() => setImgError(true)}
+              referrerPolicy="no-referrer"
+              className="w-full h-full object-contain"
+            />
+          ) : (
+            <Gift className="w-10 h-10 text-slate-300" />
+          )}
+        </div>
+
+        <div className="flex flex-col gap-0.5">
+          <h4 className="font-bold text-[12.5px] text-emerald-950 line-clamp-1">{product.name}</h4>
+          <span className="text-slate-400 text-[10.5px]">{product.brand}</span>
+        </div>
+
+        <div className="flex flex-col gap-0.5">
+          <div className="flex items-center gap-1">
+            <span className="text-emerald-700 font-bold text-[13px]">
+              {formatCurrency(product.price)}
+            </span>
+            <span className="text-[9px] text-slate-400">قیمت عمده</span>
+          </div>
+          {product.unitPrice > 0 && (
+            <div className="flex items-center gap-1">
+              <span className="text-slate-400 text-[10px] line-through">
+                {formatCurrency(product.unitPrice)}
+              </span>
+              <span className="text-[9px] text-slate-400">قیمت مصرف‌کننده</span>
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center gap-1 text-amber-600 text-[10px] font-bold">
+          <BadgePercent className="w-3.5 h-3.5" />
+          <span>پیشنهاد ویژه همکاری — موجودی محدود</span>
+        </div>
+
+        <div className="flex gap-1.5 mt-0.5">
+          <button
+            onClick={() => navigateTo('product-detail', { product })}
+            className="flex-1 py-2 border border-emerald-700 text-emerald-800 rounded-lg font-bold text-[11px] active:scale-95 transition-all"
+          >
+            جزئیات
+          </button>
+          <button
+            onClick={() => product.inStock && addToCart(product, 1)}
+            disabled={!product.inStock}
+            className="flex-1 py-2 bg-emerald-900 text-white rounded-lg font-bold text-[11px] active:scale-95 transition-all disabled:opacity-40"
+          >
+            افزودن
+          </button>
+        </div>
+      </div>
+
+      {/* Side column */}
+      <div className="flex-1 flex flex-col items-center justify-center text-center gap-2 py-2">
+        <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center">
+          <Gift className="w-6 h-6 text-white" strokeWidth={1.5} />
+        </div>
+        <div className="text-white font-bold text-[12.5px]">پیشنهادهای ویژه</div>
+        <button
+          onClick={() => navigateTo('products')}
+          className="text-white/80 font-body-small flex items-center gap-1 text-[10px]"
+        >
+          مشاهده همه
+          <ChevronLeft className="w-3 h-3" />
+        </button>
       </div>
     </div>
   );
 };
+
+// ---- HomeView -------------------------------------------------------------
 
 export const HomeView: React.FC = () => {
   const {
@@ -265,31 +450,36 @@ export const HomeView: React.FC = () => {
     navigateTo('products');
   };
 
-  // Special offers & recommended products
-  const specialOfferProducts = products.filter((p) => p.specialOffer).slice(0, 4);
-  const recommendedProducts = products.filter((p) => p.inStock && !p.specialOffer).slice(0, 4);
+  // Popular items: in-stock products, special offers first (mirrors the
+  // reference's "محبوب‌ترین اقلام" horizontal row).
+  const popularProducts = [...products]
+    .filter((p) => p.inStock)
+    .sort((a, b) => Number(b.specialOffer) - Number(a.specialOffer))
+    .slice(0, 8);
 
-  // Categories ranked by how many active products they contain — used both
-  // for the promo carousel copy and for the per-category horizontal rows
-  // below the brands section.
+  const specialOfferProducts = products.filter((p) => p.specialOffer && p.inStock);
+  const bestOfferProduct = [...specialOfferProducts].sort(
+    (a, b) => (b.discountPercentage || 0) - (a.discountPercentage || 0),
+  )[0];
+
+  // Categories ranked by how many active products they contain.
   const categoryCounts: Record<string, number> = {};
   products.forEach((p) => {
     if (p.category) categoryCounts[p.category] = (categoryCounts[p.category] || 0) + 1;
   });
-  const rankedCategories = HOME_CATEGORIES
-    .map((cat) => ({ ...cat, count: categoryCounts[cat.name] || 0 }))
+  const rankedCategories = HOME_CATEGORIES.map((cat) => ({
+    ...cat,
+    count: categoryCounts[cat.name] || 0,
+  }))
     .filter((cat) => cat.count > 0)
     .sort((a, b) => b.count - a.count);
   const topCategory = rankedCategories[0];
 
-  // ---- 3 auto-rotating promo slides (every 5s) — built from live catalog
-  // data, each backed by a real photo (product/brand) from the catalog. ----
+  // ---- 3 auto-rotating promo slides ----
   const promoSlides: PromoSlide[] = [];
 
   if (specialOfferProducts.length > 0) {
-    const bestDiscount = Math.max(
-      ...specialOfferProducts.map((p) => p.discountPercentage || 0),
-    );
+    const bestDiscount = Math.max(...specialOfferProducts.map((p) => p.discountPercentage || 0));
     promoSlides.push({
       key: 'special-offers',
       tint: 'from-rose-50 to-orange-50',
@@ -341,20 +531,18 @@ export const HomeView: React.FC = () => {
     });
   }
 
-  // 3 Recent orders for current customer
-  const recentOrders = orders
-    .filter((o) => o.customerId === currentCustomer.id)
-    .slice(0, 3);
+  // Category rows: 3 highest-stocked categories, mirroring the reference's
+  // health / beauty / skin sections (with our real 6-category taxonomy).
+  const rowCategories = rankedCategories.slice(0, 3);
 
+  // 3 Recent orders for current customer
+  const recentOrders = orders.filter((o) => o.customerId === currentCustomer.id).slice(0, 3);
   const mostRecentOrder = recentOrders[0];
 
   return (
-    <div className="pb-20 pt-3 px-3 sm:px-4 max-w-md mx-auto space-y-5">
+    <div className="pb-20 pt-3 px-3 sm:px-4 max-w-md mx-auto space-y-6">
       <AppBanner />
 
-      {/* Catalog load error — shown instead of silently displaying the
-          small placeholder demo catalog when the API is unreachable
-          (e.g. the device can't reach the Worker without a VPN). */}
       {catalogError && (
         <div className="bg-rose-50 border border-rose-200 text-rose-800 rounded-2xl p-3.5 flex items-start gap-2.5">
           <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
@@ -374,31 +562,26 @@ export const HomeView: React.FC = () => {
         </div>
       )}
 
-      {/* Quick Reorder — kept as a slim bar (no green welcome card) so the
-          reorder shortcut is still reachable, without the previous full-width
-          green banner. */}
       {mostRecentOrder && (
-        <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-2.5 flex items-center justify-between">
+        <div className="bg-emerald-50 rounded-xl px-3 py-2 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <RotateCcw className="w-4 h-4 text-emerald-700" />
-            <span className="text-xs font-bold text-emerald-900">تکرار سفارش قبلی</span>
+            <RotateCcw className="w-3.5 h-3.5 text-emerald-700" />
+            <span className="text-[11px] font-bold text-emerald-900">تکرار سفارش قبلی</span>
           </div>
           <button
             onClick={() => reorder(mostRecentOrder)}
-            className="bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-extrabold px-3 py-1.5 rounded-xl shadow-xs active:scale-95 transition-all flex items-center gap-1"
+            className="bg-emerald-700 hover:bg-emerald-800 text-white text-[10.5px] font-extrabold px-2.5 py-1 rounded-lg active:scale-95 transition-all flex items-center gap-1"
           >
             <span>ثبت مجدد ({toPersianDigits(mostRecentOrder.items.length)} کالا)</span>
-            <ArrowLeft className="w-3.5 h-3.5" />
+            <ArrowLeft className="w-3 h-3" />
           </button>
         </div>
       )}
 
-      {/* Search bar — styled per brand: "سیلانه سبز" in bold green.
-          Acts as a button (navigates to the search/products screen) rather
-          than a live input, matching the reference design. */}
+      {/* Search bar */}
       <button
         onClick={() => navigateTo('products')}
-        className="w-full flex items-center gap-2.5 bg-slate-100 border border-slate-200 rounded-2xl py-3 px-3.5 text-xs font-medium text-slate-500 active:scale-[0.99] transition-transform"
+        className="w-full flex items-center gap-2.5 bg-white border border-slate-200 rounded-2xl py-3.5 px-3.5 text-xs font-medium text-slate-500 active:scale-[0.99] transition-transform shadow-2xs"
       >
         <Search className="w-4 h-4 text-slate-400 shrink-0" />
         <span>
@@ -407,7 +590,7 @@ export const HomeView: React.FC = () => {
         </span>
       </button>
 
-      {/* Category Quick-Access Grid */}
+      {/* Categories */}
       <div className="grid grid-cols-3 gap-3">
         {HOME_CATEGORIES.map((cat) => (
           <CategoryButton
@@ -422,31 +605,21 @@ export const HomeView: React.FC = () => {
         ))}
       </div>
 
-      {/* Promo Carousel — 3 auto-advancing slides (every 5 seconds) built
-          from live catalog data (special offers / top category / brands). */}
-      <PromoCarousel slides={promoSlides} />
+      {/* Popular Items */}
+      <ProductRow
+        title="محبوب‌ترین اقلام"
+        icon={Flame}
+        accentColor="text-rose-600"
+        products={popularProducts}
+        onSeeAll={() => navigateTo('products')}
+      />
 
-      {/* Static (non-rotating) promo — the app's real automatic wholesale
-          discount rule, always visible regardless of carousel position. */}
-      <div className="bg-gradient-to-l from-amber-50 to-orange-50 border border-amber-200 rounded-2xl p-3.5 flex items-center gap-3">
-        <div className="w-11 h-11 rounded-xl bg-white border border-amber-200 flex items-center justify-center shrink-0">
-          <BadgePercent className="w-5 h-5 text-amber-600" strokeWidth={1.75} />
-        </div>
-        <div className="flex-1 min-w-0">
-          <h4 className="text-[12px] font-black text-amber-900">۵٪ تخفیف خودکار همکاری</h4>
-          <p className="text-[10.5px] text-amber-700 mt-0.5 leading-relaxed">
-            سفارش‌های عمده بالای {formatCurrency(5000000)} شامل ۵٪ تخفیف خودکار می‌شوند.
-          </p>
-        </div>
-        <Truck className="w-5 h-5 text-amber-500 shrink-0" strokeWidth={1.75} />
-      </div>
-
-      {/* Brands Horizontal Carousel / Grid */}
+      {/* Brands */}
       <div>
         <div className="flex items-center justify-between mb-2.5">
           <div className="flex items-center gap-1.5">
+            <h2 className="text-[13.5px] font-extrabold text-emerald-950">برندهای سیلانه سبز</h2>
             <Award className="w-4 h-4 text-emerald-700" />
-            <h3 className="text-xs font-extrabold text-slate-900">برندهای سیلانه سبز</h3>
           </div>
           <button
             onClick={() => {
@@ -459,7 +632,6 @@ export const HomeView: React.FC = () => {
             <ChevronLeft className="w-3.5 h-3.5" />
           </button>
         </div>
-
         <div className="grid grid-cols-4 gap-2.5">
           {brands.map((brand) => (
             <BrandCardButton
@@ -471,63 +643,23 @@ export const HomeView: React.FC = () => {
         </div>
       </div>
 
-      {/* Special Offers Section */}
-      <div>
-        <div className="flex items-center justify-between mb-2.5">
-          <div className="flex items-center gap-1.5">
-            <Flame className="w-4 h-4 text-rose-600 animate-pulse" />
-            <h3 className="text-xs font-extrabold text-slate-900">پیشنهادهای ویژه همکاری</h3>
-          </div>
-          <button
-            onClick={() => {
-              updateFilter('specialOfferOnly', true);
-              navigateTo('products');
-            }}
-            className="text-[11px] font-bold text-rose-600 flex items-center hover:underline"
-          >
-            <span>مشاهده همه</span>
-            <ChevronLeft className="w-3.5 h-3.5" />
-          </button>
-        </div>
+      {/* Weekly-offer carousel */}
+      <PromoCarousel slides={promoSlides} />
 
-        <div className="grid grid-cols-2 gap-2.5">
-          {specialOfferProducts.map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
-        </div>
+      {/* Compact real-discount strip (the app's automatic wholesale rule) */}
+      <div className="flex items-center gap-2 bg-amber-50 rounded-xl px-3 py-2">
+        <BadgePercent className="w-4 h-4 text-amber-600 shrink-0" />
+        <p className="text-[10.5px] text-amber-800 font-semibold leading-relaxed">
+          سفارش‌های عمده بالای {formatCurrency(5000000)} شامل ۵٪ تخفیف خودکار همکاری می‌شوند.
+        </p>
       </div>
 
-      {/* Recommended Products */}
-      <div>
-        <div className="flex items-center justify-between mb-2.5">
-          <div className="flex items-center gap-1.5">
-            <Sparkles className="w-4 h-4 text-emerald-700" />
-            <h3 className="text-xs font-extrabold text-slate-900">محصولات پرفروش عمده</h3>
-          </div>
-          <button
-            onClick={() => {
-              updateFilter('brand', 'همه');
-              navigateTo('products');
-            }}
-            className="text-[11px] font-bold text-emerald-700 flex items-center hover:underline"
-          >
-            <span>لیست کامل</span>
-            <ChevronLeft className="w-3.5 h-3.5" />
-          </button>
-        </div>
+      {/* Featured offer block */}
+      {bestOfferProduct && <FeaturedOfferBlock product={bestOfferProduct} />}
 
-        <div className="grid grid-cols-2 gap-2.5">
-          {recommendedProducts.map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
-        </div>
-      </div>
-
-      {/* Per-category horizontal rows — real products from the 2nd/3rd most
-          stocked categories (the #1 category is already featured in the
-          promo carousel above), so the whole catalog stays discoverable. */}
-      {rankedCategories.slice(1, 3).map((cat) => (
-        <CategoryProductsRow
+      {/* Per-category rows */}
+      {rowCategories.map((cat) => (
+        <ProductRow
           key={cat.name}
           title={cat.name}
           icon={cat.icon}
@@ -539,7 +671,7 @@ export const HomeView: React.FC = () => {
         />
       ))}
 
-      {/* Recent 3 Orders with Status */}
+      {/* Recent orders */}
       <div className="bg-white rounded-2xl border border-slate-200 p-3.5 shadow-xs">
         <div className="flex items-center justify-between mb-3 border-b border-slate-100 pb-2">
           <div className="flex items-center gap-1.5">
