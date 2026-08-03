@@ -166,29 +166,13 @@ export const HomeView: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-4 gap-2.5">
-          {brands.slice(0, 7).map((brand) => (
+          {brands.map((brand) => (
             <BrandCardButton
               key={brand.id}
               brand={brand}
               onClick={() => handleBrandClick(brand.name)}
             />
           ))}
-          {brands.length > 7 && (
-            <button
-              onClick={() => {
-                updateFilter('brand', 'همه');
-                navigateTo('products');
-              }}
-              className="flex flex-col items-center justify-center p-2 bg-rose-50 border border-rose-100 rounded-2xl active:scale-95 transition-all w-full"
-            >
-              <div className="w-12 h-12 rounded-xl bg-rose-100 flex items-center justify-center mb-1">
-                <span className="text-rose-600 text-lg leading-none">···</span>
-              </div>
-              <span className="text-[10px] font-extrabold text-rose-700 text-center leading-tight">
-                {toPersianDigits(brands.length - 7)} برند دیگر
-              </span>
-            </button>
-          )}
         </div>
       </div>
 

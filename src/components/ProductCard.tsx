@@ -130,6 +130,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
               <span className="text-sm font-black text-emerald-800">
                 {formatCurrency(product.price)}
               </span>
+              {product.unitPrice > 0 && (
+                <span className="text-[10px] text-slate-400 font-semibold mt-0.5">
+                  مصرف‌کننده: {formatCurrency(product.unitPrice)}
+                </span>
+              )}
             </div>
 
             {/* Stock status */}
