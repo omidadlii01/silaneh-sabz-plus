@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Search,
   RotateCcw,
@@ -7,21 +7,21 @@ import {
   Flame,
   Award,
   ArrowLeft,
-  CheckCircle2,
   Clock,
-  Package,
   AlertTriangle,
   Baby,
   Heart,
   Smile,
   Scissors,
   Droplet,
-  Grip,
+  Truck,
+  BadgePercent,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { ProductCard } from '../components/ProductCard';
 import { StatusBadge } from '../components/StatusBadge';
 import { AppBanner } from '../components/AppBanner';
+import { Product } from '../types';
 import { formatCurrency, toPersianDigits, resolveAssetUrl } from '../utils';
 
 interface BrandCardButtonProps {
@@ -37,14 +37,14 @@ const BrandCardButton: React.FC<BrandCardButtonProps> = ({ brand, onClick }) => 
       onClick={onClick}
       className="flex flex-col items-center justify-center p-2 bg-white border border-slate-200/90 rounded-2xl shadow-2xs hover:border-emerald-600 hover:shadow-xs active:scale-95 transition-all w-full group"
     >
-      <div className="w-12 h-12 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center overflow-hidden mb-1 p-0.5 group-hover:scale-105 transition-transform duration-200">
+      <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center overflow-hidden mb-1 p-1 group-hover:scale-105 transition-transform duration-200">
         {brand.imageUrl && !hasError ? (
           <img
             src={resolveAssetUrl(brand.imageUrl)}
             alt={brand.name}
             onError={() => setHasError(true)}
             referrerPolicy="no-referrer"
-            className="w-full h-full object-cover rounded-lg"
+            className="w-full h-full object-contain"
             loading="lazy"
           />
         ) : (
@@ -90,14 +90,147 @@ const CategoryButton: React.FC<CategoryButtonProps> = ({ name, icon: Icon, onCli
     onClick={onClick}
     className="flex flex-col items-center justify-start gap-1.5 active:scale-95 transition-transform"
   >
-    <div className="w-14 h-14 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center shadow-2xs">
-      <Icon className="w-6 h-6 text-emerald-700" />
+    {/* Icon enclosure: transparent/white surface with a thin ring only —
+        no solid color fill behind the icon — and a crisp vector icon
+        (no rasterized/pixelated artwork) for the sharpest possible render
+        at any screen density. */}
+    <div className="w-14 h-14 rounded-2xl bg-white border border-emerald-200 flex items-center justify-center shadow-2xs">
+      <Icon className="w-7 h-7 text-emerald-700" strokeWidth={1.75} />
     </div>
     <span className="text-[10.5px] font-bold text-slate-700 text-center leading-tight max-w-[64px]">
       {name}
     </span>
   </button>
 );
+
+// ---- Promo Carousel -------------------------------------------------------
+// 3 auto-rotating promotional slides (advance every 5s) built from real,
+// live app data (special offers count, top category, brand count) rather
+// than placeholder/static copy, so the carousel never goes stale.
+
+interface PromoSlide {
+  key: string;
+  gradient: string;
+  eyebrow: string;
+  title: string;
+  subtitle: string;
+  cta: string;
+  icon: React.FC<{ className?: string; strokeWidth?: number }>;
+  onClick: () => void;
+}
+
+const PROMO_INTERVAL_MS = 5000;
+
+const PromoCarousel: React.FC<{ slides: PromoSlide[] }> = ({ slides }) => {
+  const [index, setIndex] = useState(0);
+
+  // Auto-advance every 5 seconds. Reset/clear the timer whenever the slide
+  // set changes so we never leak intervals or advance past the end.
+  useEffect(() => {
+    if (slides.length <= 1) return;
+    const id = setInterval(() => {
+      setIndex((prev) => (prev + 1) % slides.length);
+    }, PROMO_INTERVAL_MS);
+    return () => clearInterval(id);
+  }, [slides.length]);
+
+  // Clamp index if the slide list shrinks (e.g. catalog reload).
+  useEffect(() => {
+    if (index >= slides.length && slides.length > 0) setIndex(0);
+  }, [slides.length, index]);
+
+  if (slides.length === 0) return null;
+  const slide = slides[Math.min(index, slides.length - 1)];
+  const Icon = slide.icon;
+
+  return (
+    <div>
+      <div
+        onClick={slide.onClick}
+        className={`relative overflow-hidden rounded-2xl h-32 p-4 flex items-center gap-3 cursor-pointer active:scale-[0.99] transition-transform shadow-sm bg-gradient-to-l ${slide.gradient}`}
+      >
+        <div className="relative z-10 flex-1 min-w-0">
+          <span className="text-[10px] font-extrabold text-white/80 tracking-wide">
+            {slide.eyebrow}
+          </span>
+          <h3 className="text-sm font-black text-white mt-0.5 leading-snug">
+            {slide.title}
+          </h3>
+          <p className="text-[11px] text-white/85 mt-1 leading-relaxed line-clamp-2">
+            {slide.subtitle}
+          </p>
+          <span className="inline-flex items-center gap-1 mt-2 text-[10.5px] font-extrabold text-white bg-white/20 backdrop-blur-sm px-2.5 py-1 rounded-full">
+            {slide.cta}
+            <ChevronLeft className="w-3 h-3" />
+          </span>
+        </div>
+        <div className="relative z-10 w-16 h-16 rounded-2xl bg-white/15 flex items-center justify-center shrink-0">
+          <Icon className="w-8 h-8 text-white" strokeWidth={1.6} />
+        </div>
+        {/* Decorative soft circle for depth, matches the "clinical/tonal" elevation style */}
+        <div className="absolute -left-6 -bottom-8 w-28 h-28 rounded-full bg-white/10 pointer-events-none" />
+      </div>
+
+      {/* Pagination Dots */}
+      <div className="flex justify-center items-center gap-1.5 mt-2.5">
+        {slides.map((s, i) => (
+          <button
+            key={s.key}
+            onClick={() => setIndex(i)}
+            aria-label={`اسلاید ${toPersianDigits(i + 1)}`}
+            className={`h-1.5 rounded-full transition-all duration-300 ${
+              i === index ? 'w-5 bg-emerald-700' : 'w-1.5 bg-slate-200'
+            }`}
+          />
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// ---- Category Product Row --------------------------------------------------
+// Horizontally-scrolling row of real products for a given category, mirroring
+// the per-category sections in the design (e.g. "پوست و بدن", "بهداشت و سلامت").
+
+interface CategoryProductsRowProps {
+  title: string;
+  icon: React.FC<{ className?: string }>;
+  products: Product[];
+  onSeeAll: () => void;
+}
+
+const CategoryProductsRow: React.FC<CategoryProductsRowProps> = ({
+  title,
+  icon: Icon,
+  products,
+  onSeeAll,
+}) => {
+  if (products.length === 0) return null;
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-2.5">
+        <div className="flex items-center gap-1.5">
+          <Icon className="w-4 h-4 text-emerald-700" />
+          <h3 className="text-xs font-extrabold text-slate-900">{title}</h3>
+        </div>
+        <button
+          onClick={onSeeAll}
+          className="text-[11px] font-bold text-emerald-700 flex items-center hover:underline"
+        >
+          <span>مشاهده همه</span>
+          <ChevronLeft className="w-3.5 h-3.5" />
+        </button>
+      </div>
+      <div className="flex gap-2.5 overflow-x-auto no-scrollbar pb-1 -mx-3 px-3">
+        {products.map((product) => (
+          <div key={product.id} className="w-[168px] shrink-0">
+            <ProductCard product={product} />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
 
 export const HomeView: React.FC = () => {
   const {
@@ -121,6 +254,71 @@ export const HomeView: React.FC = () => {
   // Special offers & recommended products
   const specialOfferProducts = products.filter((p) => p.specialOffer).slice(0, 4);
   const recommendedProducts = products.filter((p) => p.inStock && !p.specialOffer).slice(0, 4);
+
+  // Categories ranked by how many active products they contain — used both
+  // for the promo carousel copy and for the per-category horizontal rows
+  // below the brands section.
+  const categoryCounts: Record<string, number> = {};
+  products.forEach((p) => {
+    if (p.category) categoryCounts[p.category] = (categoryCounts[p.category] || 0) + 1;
+  });
+  const rankedCategories = HOME_CATEGORIES
+    .map((cat) => ({ ...cat, count: categoryCounts[cat.name] || 0 }))
+    .filter((cat) => cat.count > 0)
+    .sort((a, b) => b.count - a.count);
+  const topCategory = rankedCategories[0];
+
+  // ---- 3 auto-rotating promo slides (every 5s) — built from live catalog
+  // data so copy never drifts from what's actually in the store. ----
+  const promoSlides: PromoSlide[] = [];
+
+  if (specialOfferProducts.length > 0) {
+    promoSlides.push({
+      key: 'special-offers',
+      gradient: 'from-rose-600 to-rose-700',
+      eyebrow: 'پیشنهاد این هفته',
+      title: `${toPersianDigits(specialOfferProducts.length)} کالا با تخفیف ویژه همکاری`,
+      subtitle: 'فرصت محدود برای سفارش عمده با بیشترین سود',
+      cta: 'مشاهده تخفیف‌ها',
+      icon: Flame,
+      onClick: () => {
+        updateFilter('specialOfferOnly', true);
+        navigateTo('products');
+      },
+    });
+  }
+
+  if (topCategory) {
+    promoSlides.push({
+      key: 'top-category',
+      gradient: 'from-emerald-700 to-emerald-800',
+      eyebrow: 'پرطرفدارترین دسته',
+      title: topCategory.name,
+      subtitle: `${toPersianDigits(topCategory.count)} کالای متنوع آماده سفارش عمده`,
+      cta: 'مشاهده محصولات',
+      icon: topCategory.icon,
+      onClick: () => {
+        updateFilter('category', topCategory.name);
+        navigateTo('products');
+      },
+    });
+  }
+
+  if (brands.length > 0) {
+    promoSlides.push({
+      key: 'brands',
+      gradient: 'from-teal-600 to-emerald-800',
+      eyebrow: 'اعتبار سیلانه سبز',
+      title: `${toPersianDigits(brands.length)} برند معتبر، زیر یک سقف`,
+      subtitle: 'همه برندهای مورد اعتماد داروخانه‌ها و فروشگاه‌ها',
+      cta: 'مشاهده برندها',
+      icon: Award,
+      onClick: () => {
+        updateFilter('brand', 'همه');
+        navigateTo('products');
+      },
+    });
+  }
 
   // 3 Recent orders for current customer
   const recentOrders = orders
@@ -201,6 +399,25 @@ export const HomeView: React.FC = () => {
             }}
           />
         ))}
+      </div>
+
+      {/* Promo Carousel — 3 auto-advancing slides (every 5 seconds) built
+          from live catalog data (special offers / top category / brands). */}
+      <PromoCarousel slides={promoSlides} />
+
+      {/* Static (non-rotating) promo — the app's real automatic wholesale
+          discount rule, always visible regardless of carousel position. */}
+      <div className="bg-gradient-to-l from-amber-50 to-orange-50 border border-amber-200 rounded-2xl p-3.5 flex items-center gap-3">
+        <div className="w-11 h-11 rounded-xl bg-white border border-amber-200 flex items-center justify-center shrink-0">
+          <BadgePercent className="w-5 h-5 text-amber-600" strokeWidth={1.75} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <h4 className="text-[12px] font-black text-amber-900">۵٪ تخفیف خودکار همکاری</h4>
+          <p className="text-[10.5px] text-amber-700 mt-0.5 leading-relaxed">
+            سفارش‌های عمده بالای {formatCurrency(5000000)} شامل ۵٪ تخفیف خودکار می‌شوند.
+          </p>
+        </div>
+        <Truck className="w-5 h-5 text-amber-500 shrink-0" strokeWidth={1.75} />
       </div>
 
       {/* Brands Horizontal Carousel / Grid */}
@@ -284,6 +501,22 @@ export const HomeView: React.FC = () => {
           ))}
         </div>
       </div>
+
+      {/* Per-category horizontal rows — real products from the 2nd/3rd most
+          stocked categories (the #1 category is already featured in the
+          promo carousel above), so the whole catalog stays discoverable. */}
+      {rankedCategories.slice(1, 3).map((cat) => (
+        <CategoryProductsRow
+          key={cat.name}
+          title={cat.name}
+          icon={cat.icon}
+          products={products.filter((p) => p.category === cat.name).slice(0, 8)}
+          onSeeAll={() => {
+            updateFilter('category', cat.name);
+            navigateTo('products');
+          }}
+        />
+      ))}
 
       {/* Recent 3 Orders with Status */}
       <div className="bg-white rounded-2xl border border-slate-200 p-3.5 shadow-xs">
