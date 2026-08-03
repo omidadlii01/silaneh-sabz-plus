@@ -10,7 +10,7 @@ interface SeylanehLogoProps {
 export const SeylanehLogo: React.FC<SeylanehLogoProps> = ({ className = 'h-8' }) => {
   return (
     <img
-      src="/logo-full.png"
+      src={`${import.meta.env.BASE_URL}logo-full.png`}
       alt="سیلانه سبز"
       className={`${className} w-auto object-contain`}
       draggable={false}
