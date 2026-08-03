@@ -37,7 +37,7 @@ export const BootSplash: React.FC<{ onDone: () => void }> = ({ onDone }) => {
         <img
           src="/logo-splash.png"
           alt="سیلانه سبز"
-          className="w-32 h-32 rounded-full object-contain"
+          className="w-32 h-32 object-contain"
           draggable={false}
         />
       </div>

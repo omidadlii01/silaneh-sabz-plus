@@ -16,7 +16,7 @@ const config: CapacitorConfig = {
       launchAutoHide: true,
       backgroundColor: '#0f5338',
       androidSplashResourceName: 'splash',
-      androidScaleType: 'CENTER_CROP',
+      androidScaleType: 'CENTER',
       showSpinner: true,
       androidSpinnerStyle: 'small',
       spinnerColor: '#34d399',
