@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.silaneh.sabzplus',
-  appName: 'سیلانه سبز پلاس',
+  appName: 'Seylaneh Sabz',
   webDir: 'dist',
   server: {
     androidScheme: 'https',

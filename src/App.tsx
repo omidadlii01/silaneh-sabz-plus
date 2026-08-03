@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { AppProvider, useApp } from './context/AppContext';
+import { BootSplash } from './components/BootSplash';
 import { Header } from './components/Header';
 import { BottomNav } from './components/BottomNav';
 import { LoginView } from './views/LoginView';
@@ -48,8 +49,11 @@ const MainContent: React.FC = () => {
 };
 
 export default function App() {
+  const [booting, setBooting] = useState(true);
+
   return (
     <AppProvider>
+      {booting && <BootSplash onDone={() => setBooting(false)} />}
       <MainContent />
     </AppProvider>
   );
