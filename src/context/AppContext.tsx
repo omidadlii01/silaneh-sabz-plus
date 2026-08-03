@@ -98,11 +98,26 @@ const DEFAULT_FILTERS: FilterOptions = {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
+const SAVED_CUSTOMER_KEY = 'seylaneh_current_customer';
+
+function loadSavedCustomer(): Customer | null {
+  try {
+    const raw = localStorage.getItem(SAVED_CUSTOMER_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed && parsed.id) return parsed as Customer;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const savedCustomer = loadSavedCustomer();
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [currentCustomer, setCurrentCustomer] = useState<Customer>(EMPTY_CUSTOMER);
+  const [currentCustomer, setCurrentCustomer] = useState<Customer>(savedCustomer || EMPTY_CUSTOMER);
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
-  const [viewScreen, setViewScreen] = useState<ViewScreen>('login');
+  const [viewScreen, setViewScreen] = useState<ViewScreen>(savedCustomer ? 'home' : 'login');
   const [activeTab, setActiveTab] = useState<ActiveTab>('home');
 
   const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
@@ -146,6 +161,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCurrentCustomer(customer);
     setIsAdmin(false);
     try {
+      localStorage.setItem(SAVED_CUSTOMER_KEY, JSON.stringify(customer));
+    } catch {
+      // ignore storage errors (e.g. private mode)
+    }
+    try {
       const fetchedOrders = await apiGetOrders(customer.id, customer.storeName);
       setOrders(enrichOrderItems(fetchedOrders));
     } catch {
@@ -153,6 +173,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     navigateTo('home');
   };
+
+  // If a customer was restored from localStorage on app start, fetch their orders once.
+  React.useEffect(() => {
+    if (currentCustomer.id && orders.length === 0) {
+      apiGetOrders(currentCustomer.id, currentCustomer.storeName)
+        .then((fetched) => setOrders(enrichOrderItems(fetched)))
+        .catch(() => setOrders([]));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const signup = async (data: {
     firstName: string;
@@ -168,12 +198,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCurrentCustomer(customer);
     setIsAdmin(false);
     setOrders([]);
+    try {
+      localStorage.setItem(SAVED_CUSTOMER_KEY, JSON.stringify(customer));
+    } catch {
+      // ignore storage errors
+    }
     navigateTo('home');
   };
 
   const logout = () => {
     setIsAdmin(false);
     setCart([]);
+    setCurrentCustomer(EMPTY_CUSTOMER);
+    try {
+      localStorage.removeItem(SAVED_CUSTOMER_KEY);
+    } catch {
+      // ignore
+    }
     setViewScreen('login');
   };
 
