@@ -22,7 +22,7 @@ import {
   Tag,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { formatCurrency, toPersianDigits } from '../utils';
+import { formatCurrency, toPersianDigits, resolveAssetUrl } from '../utils';
 
 export const ProductDetailView: React.FC = () => {
   const { selectedProduct, cart, addToCart, updateCartQuantity, navigateTo } = useApp();
@@ -96,7 +96,7 @@ export const ProductDetailView: React.FC = () => {
       <div className="w-full h-64 bg-slate-50 border border-slate-200/90 rounded-3xl flex items-center justify-center relative shadow-xs overflow-hidden p-4">
         {selectedProduct.imageUrl && !imgError ? (
           <img
-            src={selectedProduct.imageUrl}
+            src={resolveAssetUrl(selectedProduct.imageUrl)}
             alt={selectedProduct.name}
             onError={() => setImgError(true)}
             referrerPolicy="no-referrer"

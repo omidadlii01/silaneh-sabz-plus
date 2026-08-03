@@ -1,7 +1,7 @@
 import React from 'react';
 import { ShoppingBag, Trash2, Plus, Minus, ArrowLeft, ArrowRight, Box, Tag, ShieldCheck } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { formatCurrency, toPersianDigits } from '../utils';
+import { formatCurrency, toPersianDigits, resolveAssetUrl } from '../utils';
 
 interface CartItemImageProps {
   product: any;
@@ -18,7 +18,7 @@ const CartItemImage: React.FC<CartItemImageProps> = ({ product, onClick }) => {
     >
       {product.imageUrl && !hasError ? (
         <img
-          src={product.imageUrl}
+          src={resolveAssetUrl(product.imageUrl)}
           alt={product.name}
           onError={() => setHasError(true)}
           referrerPolicy="no-referrer"

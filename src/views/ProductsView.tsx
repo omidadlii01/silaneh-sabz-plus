@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { ProductCard } from '../components/ProductCard';
-import { toPersianDigits, formatCurrency } from '../utils';
+import { toPersianDigits, formatCurrency, resolveAssetUrl } from '../utils';
 import { Product } from '../types';
 
 // Single-row product item used on the dedicated brand page (matches the
@@ -64,7 +64,7 @@ const BrandProductRow: React.FC<{ product: Product }> = ({ product }) => {
       >
         {product.imageUrl && !imgError ? (
           <img
-            src={product.imageUrl}
+            src={resolveAssetUrl(product.imageUrl)}
             alt={product.name}
             onError={() => setImgError(true)}
             referrerPolicy="no-referrer"
@@ -207,13 +207,17 @@ export const ProductsView: React.FC = () => {
             <Search className="w-4 h-4" />
           </button>
 
-          {/* Brand logo, bottom-right of the banner */}
-          <div className="absolute bottom-3 right-3 w-16 h-16 rounded-2xl bg-white border-4 border-white shadow-md overflow-hidden flex items-center justify-center flex-shrink-0">
-            {selectedBrand?.imageUrl ? (
-              <img src={selectedBrand.imageUrl} alt={filters.brand} className="w-full h-full object-contain p-1" />
-            ) : (
-              <span className="text-emerald-800 font-black text-lg">{filters.brand.slice(0, 2)}</span>
-            )}
+          <div className="w-full flex items-center justify-between">
+            <h2 className="text-white text-base font-extrabold drop-shadow-sm">
+              محصولات {filters.brand}
+            </h2>
+            <div className="w-16 h-16 rounded-2xl bg-white border-4 border-white shadow-md overflow-hidden flex items-center justify-center flex-shrink-0">
+              {selectedBrand?.imageUrl ? (
+                <img src={resolveAssetUrl(selectedBrand.imageUrl)} alt={filters.brand} className="w-full h-full object-contain p-1" />
+              ) : (
+                <span className="text-emerald-800 font-black text-lg">{filters.brand.slice(0, 2)}</span>
+              )}
+            </div>
           </div>
         </div>
 

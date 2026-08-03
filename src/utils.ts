@@ -81,3 +81,16 @@ export function getStatusBadgeInfo(status: OrderStatus): {
       };
   }
 }
+
+// Product/brand image URLs stored in the database are sometimes site-root
+// relative (e.g. "/brands/kodex.png"), which only resolves correctly when
+// the app is served from the domain root. Under a subpath deployment (e.g.
+// GitHub Pages at "/silaneh-sabz-plus/"), a leading-slash path 404s. This
+// rewrites any such path to be relative to the app's actual base path.
+// Absolute http(s) URLs (external images) are returned unchanged.
+export function resolveAssetUrl(url?: string | null): string {
+  if (!url) return '';
+  if (/^(https?:)?\/\//i.test(url) || url.startsWith('data:')) return url;
+  const base = import.meta.env.BASE_URL || '/';
+  return base.replace(/\/$/, '/') + url.replace(/^\//, '');
+}

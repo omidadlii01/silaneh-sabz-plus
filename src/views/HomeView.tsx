@@ -16,7 +16,7 @@ import { useApp } from '../context/AppContext';
 import { ProductCard } from '../components/ProductCard';
 import { StatusBadge } from '../components/StatusBadge';
 import { AppBanner } from '../components/AppBanner';
-import { formatCurrency, toPersianDigits } from '../utils';
+import { formatCurrency, toPersianDigits, resolveAssetUrl } from '../utils';
 
 interface BrandCardButtonProps {
   brand: any;
@@ -34,7 +34,7 @@ const BrandCardButton: React.FC<BrandCardButtonProps> = ({ brand, onClick }) => 
       <div className="w-12 h-12 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center overflow-hidden mb-1 p-0.5 group-hover:scale-105 transition-transform duration-200">
         {brand.imageUrl && !hasError ? (
           <img
-            src={brand.imageUrl}
+            src={resolveAssetUrl(brand.imageUrl)}
             alt={brand.name}
             onError={() => setHasError(true)}
             referrerPolicy="no-referrer"

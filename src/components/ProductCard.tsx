@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { Product } from '../types';
 import { useApp } from '../context/AppContext';
-import { formatCurrency, toPersianDigits } from '../utils';
+import { formatCurrency, toPersianDigits, resolveAssetUrl } from '../utils';
 
 interface ProductCardProps {
   product: Product;
@@ -73,7 +73,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       >
         {product.imageUrl && !imgError ? (
           <img
-            src={product.imageUrl}
+            src={resolveAssetUrl(product.imageUrl)}
             alt={product.name}
             onError={() => setImgError(true)}
             referrerPolicy="no-referrer"
