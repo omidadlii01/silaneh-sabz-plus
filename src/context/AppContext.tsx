@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useMemo } from 'react';
+import React, { createContext, useContext, useState, useMemo, useEffect } from 'react';
 import {
   ActiveTab,
   Brand,
@@ -15,7 +15,7 @@ import {
   INITIAL_BRANDS,
   INITIAL_PRODUCTS,
 } from '../mockData';
-import { apiSignup, apiLogin, apiGetOrders, apiCreateOrder } from '../api';
+import { apiSignup, apiLogin, apiGetOrders, apiCreateOrder, apiGetProducts, apiGetBrands } from '../api';
 
 interface AppContextType {
   // Navigation & User
@@ -121,7 +121,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [activeTab, setActiveTab] = useState<ActiveTab>('home');
 
   const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
-  const [brands] = useState<Brand[]>(INITIAL_BRANDS);
+  const [brands, setBrands] = useState<Brand[]>(INITIAL_BRANDS);
   const [orders, setOrders] = useState<Order[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
 
@@ -130,6 +130,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [lastSubmittedOrder, setLastSubmittedOrder] = useState<Order | null>(null);
 
   const [filters, setFilters] = useState<FilterOptions>(DEFAULT_FILTERS);
+
+  // Load the real product/brand catalog from the Cloudflare Worker API,
+  // replacing the placeholder mock data. Products without an approved image
+  // yet are held back from the customer-facing app until an image is added
+  // in the admin panel.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const [apiProducts, apiBrands] = await Promise.all([apiGetProducts(), apiGetBrands()]);
+        if (cancelled) return;
+        setProducts(apiProducts.filter((p) => !!p.imageUrl));
+        if (apiBrands.length > 0) setBrands(apiBrands);
+      } catch (err) {
+        // Network/API failure: keep whatever was already loaded (mock data on first load)
+        console.error('Failed to load products/brands from API', err);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Navigation logic
   const navigateTo = (screen: ViewScreen, params?: { product?: Product; order?: Order }) => {
