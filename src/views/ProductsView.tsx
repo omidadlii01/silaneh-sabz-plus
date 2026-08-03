@@ -174,7 +174,7 @@ export const ProductsView: React.FC = () => {
           {/* Wide banner/cover image slot */}
           {selectedBrand?.bannerImageUrl && (
             <img
-              src={selectedBrand.bannerImageUrl}
+              src={resolveAssetUrl(selectedBrand.bannerImageUrl)}
               alt={filters.brand}
               referrerPolicy="no-referrer"
               className="absolute inset-0 w-full h-full object-cover"
@@ -182,16 +182,18 @@ export const ProductsView: React.FC = () => {
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-black/0 to-black/10" />
 
-          {/* Top-right group: back button + brand title */}
-          <div className="absolute top-3 right-3 flex items-center gap-2">
-            <button
-              onClick={resetFilters}
-              className="w-8 h-8 flex items-center justify-center rounded-full bg-white/90 text-slate-700 shadow-xs flex-shrink-0"
-              aria-label="بازگشت"
-            >
-              <ArrowRight className="w-4 h-4" />
-            </button>
-            <h2 className="text-white text-base font-extrabold drop-shadow-sm truncate max-w-[52vw]">
+          {/* Back button — fixed top-right corner */}
+          <button
+            onClick={resetFilters}
+            className="absolute top-3 right-3 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-white/90 text-slate-700 shadow-xs"
+            aria-label="بازگشت"
+          >
+            <ArrowRight className="w-4 h-4" />
+          </button>
+
+          {/* Brand title — bounded strip between the two buttons so it can truncate safely */}
+          <div className="absolute top-3 right-14 left-14 z-0 flex justify-end pointer-events-none">
+            <h2 className="text-white text-base font-extrabold drop-shadow-sm truncate min-w-0">
               محصولات {filters.brand}
             </h2>
           </div>
@@ -199,7 +201,7 @@ export const ProductsView: React.FC = () => {
           {/* Top-left: brand-scoped search toggle */}
           <button
             onClick={() => setBrandSearchOpen((v) => !v)}
-            className={`absolute top-3 left-3 w-8 h-8 flex items-center justify-center rounded-full shadow-xs transition-colors ${
+            className={`absolute top-3 left-3 z-10 w-8 h-8 flex items-center justify-center rounded-full shadow-xs transition-colors ${
               brandSearchOpen ? 'bg-emerald-800 text-white' : 'bg-white/90 text-slate-700'
             }`}
             aria-label="جستجو در محصولات این برند"
@@ -207,17 +209,13 @@ export const ProductsView: React.FC = () => {
             <Search className="w-4 h-4" />
           </button>
 
-          <div className="w-full flex items-center justify-between">
-            <h2 className="text-white text-base font-extrabold drop-shadow-sm">
-              محصولات {filters.brand}
-            </h2>
-            <div className="w-16 h-16 rounded-2xl bg-white border-4 border-white shadow-md overflow-hidden flex items-center justify-center flex-shrink-0">
-              {selectedBrand?.imageUrl ? (
-                <img src={resolveAssetUrl(selectedBrand.imageUrl)} alt={filters.brand} className="w-full h-full object-contain p-1" />
-              ) : (
-                <span className="text-emerald-800 font-black text-lg">{filters.brand.slice(0, 2)}</span>
-              )}
-            </div>
+          {/* Brand logo, bottom-right of the banner */}
+          <div className="absolute bottom-3 right-3 z-10 w-16 h-16 rounded-2xl bg-white border-4 border-white shadow-md overflow-hidden flex items-center justify-center flex-shrink-0">
+            {selectedBrand?.imageUrl ? (
+              <img src={resolveAssetUrl(selectedBrand.imageUrl)} alt={filters.brand} className="w-full h-full object-contain p-1" />
+            ) : (
+              <span className="text-emerald-800 font-black text-lg">{filters.brand.slice(0, 2)}</span>
+            )}
           </div>
         </div>
 
