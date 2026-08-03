@@ -14,7 +14,8 @@ export interface Brand {
   name: string; // e.g. کدکس, آمبرلا, پیکسلی, ...
   englishName: string;
   logoColor: string; // Tailwind background gradient/color for placeholder
-  imageUrl?: string; // Brand image or logo URL
+  imageUrl?: string; // Brand logo URL (small square, shown on the banner)
+  bannerImageUrl?: string; // Wide banner/cover image for the dedicated brand page
   active: boolean;
 }
 

@@ -126,6 +126,12 @@ export const ProductsView: React.FC = () => {
     [brands, filters.brand],
   );
 
+  // Brand-scoped search: tapping the search icon on the brand page opens an
+  // inline search box that filters only within this brand's products (it
+  // does NOT navigate away to the global catalog).
+  const [brandSearchOpen, setBrandSearchOpen] = useState(false);
+  const [brandSearchTerm, setBrandSearchTerm] = useState('');
+
   // Distinct Categories list from products
   const categories = useMemo(() => {
     const set = new Set<string>();
@@ -149,9 +155,13 @@ export const ProductsView: React.FC = () => {
         const matchCode = p.code.toLowerCase().includes(query);
         if (!matchName && !matchBrand && !matchCode) return false;
       }
+      if (isBrandView && brandSearchTerm.trim()) {
+        const q = brandSearchTerm.trim().toLowerCase();
+        if (!p.name.toLowerCase().includes(q) && !p.code.toLowerCase().includes(q)) return false;
+      }
       return true;
     });
-  }, [products, filters]);
+  }, [products, filters, isBrandView, brandSearchTerm]);
 
   // ---------- Dedicated brand page ----------
   if (isBrandView) {
@@ -159,36 +169,70 @@ export const ProductsView: React.FC = () => {
       <div className="pb-20 max-w-md mx-auto">
         {/* Banner */}
         <div
-          className={`relative h-40 bg-gradient-to-br ${selectedBrand?.logoColor || 'from-emerald-700 to-emerald-900'} flex items-end px-3 pb-3`}
+          className={`relative h-44 bg-gradient-to-br ${selectedBrand?.logoColor || 'from-emerald-700 to-emerald-900'} overflow-hidden`}
         >
+          {/* Wide banner/cover image slot */}
+          {selectedBrand?.bannerImageUrl && (
+            <img
+              src={selectedBrand.bannerImageUrl}
+              alt={filters.brand}
+              referrerPolicy="no-referrer"
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-black/0 to-black/10" />
+
+          {/* Top-right group: back button + brand title */}
+          <div className="absolute top-3 right-3 flex items-center gap-2">
+            <button
+              onClick={resetFilters}
+              className="w-8 h-8 flex items-center justify-center rounded-full bg-white/90 text-slate-700 shadow-xs flex-shrink-0"
+              aria-label="بازگشت"
+            >
+              <ArrowRight className="w-4 h-4" />
+            </button>
+            <h2 className="text-white text-base font-extrabold drop-shadow-sm truncate max-w-[52vw]">
+              محصولات {filters.brand}
+            </h2>
+          </div>
+
+          {/* Top-left: brand-scoped search toggle */}
           <button
-            onClick={resetFilters}
-            className="absolute top-3 right-3 w-8 h-8 flex items-center justify-center rounded-full bg-white/90 text-slate-700 shadow-xs"
-            aria-label="بازگشت"
-          >
-            <ArrowRight className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => navigateTo('products')}
-            className="absolute top-3 left-3 w-8 h-8 flex items-center justify-center rounded-full bg-white/90 text-slate-700 shadow-xs"
-            aria-label="جستجو"
+            onClick={() => setBrandSearchOpen((v) => !v)}
+            className={`absolute top-3 left-3 w-8 h-8 flex items-center justify-center rounded-full shadow-xs transition-colors ${
+              brandSearchOpen ? 'bg-emerald-800 text-white' : 'bg-white/90 text-slate-700'
+            }`}
+            aria-label="جستجو در محصولات این برند"
           >
             <Search className="w-4 h-4" />
           </button>
 
-          <div className="w-full flex items-center justify-between">
-            <h2 className="text-white text-base font-extrabold drop-shadow-sm">
-              محصولات {filters.brand}
-            </h2>
-            <div className="w-16 h-16 rounded-2xl bg-white border-4 border-white shadow-md overflow-hidden flex items-center justify-center flex-shrink-0">
-              {selectedBrand?.imageUrl ? (
-                <img src={selectedBrand.imageUrl} alt={filters.brand} className="w-full h-full object-contain p-1" />
-              ) : (
-                <span className="text-emerald-800 font-black text-lg">{filters.brand.slice(0, 2)}</span>
-              )}
-            </div>
+          {/* Brand logo, bottom-right of the banner */}
+          <div className="absolute bottom-3 right-3 w-16 h-16 rounded-2xl bg-white border-4 border-white shadow-md overflow-hidden flex items-center justify-center flex-shrink-0">
+            {selectedBrand?.imageUrl ? (
+              <img src={selectedBrand.imageUrl} alt={filters.brand} className="w-full h-full object-contain p-1" />
+            ) : (
+              <span className="text-emerald-800 font-black text-lg">{filters.brand.slice(0, 2)}</span>
+            )}
           </div>
         </div>
+
+        {/* Inline brand-scoped search bar (shown when the search icon is tapped) */}
+        {brandSearchOpen && (
+          <div className="px-3 sm:px-4 pt-3">
+            <div className="relative">
+              <Search className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2" />
+              <input
+                autoFocus
+                type="text"
+                value={brandSearchTerm}
+                onChange={(e) => setBrandSearchTerm(e.target.value)}
+                placeholder={`جستجو در محصولات ${filters.brand}...`}
+                className="w-full bg-white border border-slate-200 rounded-xl pr-9 pl-3 py-2.5 text-xs font-bold text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-700/30"
+              />
+            </div>
+          </div>
+        )}
 
         <div className="px-3 sm:px-4 pt-3 space-y-3">
           {/* Count + quick filter chips */}
