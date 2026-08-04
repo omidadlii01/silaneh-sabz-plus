@@ -1,5 +1,4 @@
 import React from 'react';
-import { Home, Package, ClipboardList, User } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { ActiveTab } from '../types';
 
@@ -9,11 +8,11 @@ export const BottomNav: React.FC = () => {
   // Hide bottom nav on login screen
   if (viewScreen === 'login') return null;
 
-  const navItems: { id: ActiveTab; label: string; icon: React.FC<{ className?: string }> }[] = [
-    { id: 'home', label: 'خانه', icon: Home },
-    { id: 'products', label: 'محصولات', icon: Package },
-    { id: 'orders', label: 'سفارشات', icon: ClipboardList },
-    { id: 'account', label: 'حساب کاربری', icon: User },
+  const navItems: { id: ActiveTab; label: string; icon: string }[] = [
+    { id: 'home', label: 'خانه', icon: 'home' },
+    { id: 'products', label: 'محصولات', icon: 'inventory_2' },
+    { id: 'orders', label: 'سفارشات', icon: 'receipt_long' },
+    { id: 'account', label: 'حساب کاربری', icon: 'account_circle' },
   ];
 
   const handleTabClick = (tabId: ActiveTab) => {
@@ -24,27 +23,38 @@ export const BottomNav: React.FC = () => {
   };
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-slate-200 shadow-lg pb-safe">
+    <nav className="fixed bottom-0 left-0 right-0 z-30 bg-white/90 backdrop-blur-xl border-t border-[#e2e8f0] shadow-[0_-4px_16px_rgba(0,0,0,0.04)] pb-safe">
       <div className="max-w-md mx-auto h-16 flex items-center justify-around px-2">
         {navItems.map((item) => {
-          const Icon = item.icon;
           const isActive = activeTab === item.id && viewScreen !== 'admin';
 
           return (
             <button
               key={item.id}
               onClick={() => handleTabClick(item.id)}
-              className={`flex flex-col items-center justify-center flex-1 py-1.5 transition-all duration-200 relative ${
-                isActive ? 'text-emerald-700 font-bold' : 'text-slate-500 font-medium hover:text-slate-800'
-              }`}
+              className="flex flex-col items-center justify-center flex-1 py-1.5 transition-all duration-200 relative"
             >
-              <div className={`p-1 rounded-xl transition-all ${isActive ? 'bg-emerald-50 text-emerald-700 scale-105' : ''}`}>
-                <Icon className="w-5 h-5" />
+              <div
+                className={`px-3.5 py-0.5 rounded-full transition-all ${
+                  isActive ? 'bg-[#82f5c1]/30' : ''
+                }`}
+              >
+                <span
+                  className={`material-symbols-outlined text-[22px] ${
+                    isActive ? 'text-[#006c4a]' : 'text-[#6f7973]'
+                  }`}
+                  style={isActive ? { fontVariationSettings: "'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24" } : undefined}
+                >
+                  {item.icon}
+                </span>
               </div>
-              <span className="text-[11px] mt-0.5 leading-none">{item.label}</span>
-              {isActive && (
-                <span className="absolute top-0 w-8 h-0.5 bg-emerald-600 rounded-full" />
-              )}
+              <span
+                className={`text-[10.5px] mt-0.5 leading-none ${
+                  isActive ? 'font-black text-[#022c22]' : 'font-semibold text-[#6f7973]'
+                }`}
+              >
+                {item.label}
+              </span>
             </button>
           );
         })}

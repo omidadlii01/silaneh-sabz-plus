@@ -1,96 +1,90 @@
 import React from 'react';
-import { ShoppingBag, ArrowRight, ShieldCheck, Bell, User, ClipboardList } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { toPersianDigits } from '../utils';
 import { SeylanehLogo } from './SeylanehLogo';
 
 export const Header: React.FC = () => {
-  const {
-    viewScreen,
-    navigateTo,
-    cartTotalCount,
-    isAdmin,
-  } = useApp();
+  const { viewScreen, navigateTo, cartTotalCount, isAdmin } = useApp();
 
   const isSubPage = ['product-detail', 'checkout', 'order-success'].includes(viewScreen);
 
   return (
-    <header className="sticky top-0 z-30 bg-white text-slate-900 shadow-sm border-b border-slate-200">
-      <div className="max-w-md mx-auto px-3 h-14 grid grid-cols-3 items-center">
-        {/* Right column: back button on sub-pages, admin badge otherwise */}
-        <div className="flex items-center justify-start">
-          {isSubPage ? (
-            <button
-              onClick={() => {
-                if (viewScreen === 'product-detail') navigateTo('products');
-                else if (viewScreen === 'checkout') navigateTo('cart');
-                else navigateTo('home');
-              }}
-              className="p-1.5 rounded-lg text-slate-600 hover:bg-slate-100 active:scale-95 transition-all flex items-center gap-1 text-sm font-medium"
-            >
-              <ArrowRight className="w-5 h-5" />
-              <span>بازگشت</span>
-            </button>
-          ) : isAdmin ? (
-            <button
-              onClick={() => navigateTo('admin')}
-              className="flex items-center gap-1 bg-amber-50 text-amber-700 border border-amber-200 text-xs px-2.5 py-1 rounded-full font-medium"
-            >
-              <ShieldCheck className="w-3.5 h-3.5 text-amber-600" />
-              <span>مدیریت</span>
-            </button>
-          ) : null}
-        </div>
-
-        {/* Center column: logo, always visible and centered */}
-        <div className="flex items-center justify-center">
-          <div
-            onClick={() => navigateTo('home')}
-            className="flex items-center cursor-pointer"
-          >
-            <SeylanehLogo className="h-8" />
-          </div>
-        </div>
-
-        {/* Left column: notification, orders, profile, cart */}
-        <div className="flex items-center justify-end gap-1">
+    <header className="bg-white/85 backdrop-blur-xl sticky top-0 z-30 border-b border-[#e2e8f0] flex justify-between items-center px-4 py-2.5 w-full max-w-md mx-auto h-16 shadow-sm">
+      {/* Right side (RTL): back button on sub-pages, otherwise logo + brand name */}
+      <div className="flex items-center gap-2.5 flex-row-reverse">
+        {isSubPage ? (
           <button
-            onClick={() => navigateTo('account')}
-            className="p-2 rounded-xl text-slate-600 hover:bg-slate-100 active:scale-95 transition-all"
-            aria-label="اعلان‌ها"
+            onClick={() => {
+              if (viewScreen === 'product-detail') navigateTo('products');
+              else if (viewScreen === 'checkout') navigateTo('cart');
+              else navigateTo('home');
+            }}
+            className="flex items-center gap-1 text-[#022c22] font-bold text-sm p-1.5 -mr-1.5 rounded-lg hover:bg-[#f0f4f8] active:scale-95 transition-all"
           >
-            <Bell className="w-5 h-5" />
+            <span className="material-symbols-outlined text-[22px]">arrow_forward</span>
+            <span>بازگشت</span>
           </button>
-
-          <button
-            onClick={() => navigateTo('my-orders')}
-            className="p-2 rounded-xl text-slate-600 hover:bg-slate-100 active:scale-95 transition-all"
-            aria-label="سفارشات"
-          >
-            <ClipboardList className="w-5 h-5" />
-          </button>
-
-          <button
-            onClick={() => navigateTo('account')}
-            className="p-2 rounded-xl text-slate-600 hover:bg-slate-100 active:scale-95 transition-all"
-            aria-label="حساب کاربری"
-          >
-            <User className="w-5 h-5" />
-          </button>
-
-          <button
-            onClick={() => navigateTo('cart')}
-            className="relative p-2 rounded-xl text-slate-600 hover:bg-slate-100 active:scale-95 transition-all"
-            aria-label="سبد خرید"
-          >
-            <ShoppingBag className="w-5 h-5" />
-            {cartTotalCount > 0 && (
-              <span className="absolute -top-1 -right-1 bg-emerald-600 text-white text-[10px] font-extrabold min-w-[18px] h-[18px] px-0.5 rounded-full flex items-center justify-center border-2 border-white shadow-sm">
-                {toPersianDigits(cartTotalCount)}
+        ) : (
+          <>
+            <div className="flex flex-col text-right">
+              <span className="font-['Vazirmatn'] text-[18px] sm:text-[19px] font-black text-[#022c22] leading-tight">
+                سیلانه <span className="text-[#006c4a] font-black">سبز</span>
               </span>
-            )}
+              <span className="text-[10px] text-[#006c4a] font-bold tracking-wide">پلاس B2B</span>
+            </div>
+            <button
+              onClick={() => navigateTo('home')}
+              className="flex items-center justify-center bg-transparent border-none shadow-none"
+            >
+              <SeylanehLogo className="h-10 sm:h-11" />
+            </button>
+          </>
+        )}
+      </div>
+
+      {/* Left side (RTL): actions */}
+      <div className="flex items-center gap-1.5">
+        {isAdmin && !isSubPage && (
+          <button
+            onClick={() => navigateTo('admin')}
+            className="flex items-center gap-1 bg-amber-50 text-amber-700 border border-amber-200 text-[11px] px-2.5 py-1 rounded-full font-bold ml-1"
+          >
+            <span className="material-symbols-outlined text-[14px]">verified_user</span>
+            <span>مدیریت</span>
           </button>
-        </div>
+        )}
+
+        <button
+          onClick={() => navigateTo('cart')}
+          className="relative p-2 rounded-full hover:bg-[#f0f4f8] active:scale-95 transition-transform text-[#022c22] flex items-center justify-center"
+          title="سبد خرید"
+          aria-label="سبد خرید"
+        >
+          <span className="material-symbols-outlined text-[24px]">shopping_cart</span>
+          {cartTotalCount > 0 && (
+            <span className="absolute -top-1 -right-1 bg-[#006c4a] text-white text-[10px] font-extrabold min-w-[20px] h-5 px-0.5 rounded-full flex items-center justify-center border-2 border-white shadow-xs">
+              {toPersianDigits(cartTotalCount)}
+            </span>
+          )}
+        </button>
+
+        <button
+          onClick={() => navigateTo('my-orders')}
+          className="relative p-2 rounded-full hover:bg-[#f0f4f8] active:scale-95 transition-transform text-[#022c22] flex items-center justify-center"
+          title="سفارشات"
+          aria-label="سفارشات"
+        >
+          <span className="material-symbols-outlined text-[24px]">receipt_long</span>
+        </button>
+
+        <button
+          onClick={() => navigateTo('account')}
+          className="relative p-2 rounded-full hover:bg-[#f0f4f8] active:scale-95 transition-transform text-[#022c22] flex items-center justify-center"
+          title="حساب کاربری"
+          aria-label="حساب کاربری"
+        >
+          <span className="material-symbols-outlined text-[24px]">account_circle</span>
+        </button>
       </div>
     </header>
   );
