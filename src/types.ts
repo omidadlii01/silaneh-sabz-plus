@@ -1,112 +1,94 @@
-export type BusinessType = 'داروخانه' | 'سوپرمارکت' | 'فروشگاه آرایشی و بهداشتی' | 'هایپرمارکت' | 'گالری زیبایی';
+export interface Product {
+  id: string;
+  name: string;
+  brand: string;
+  brandEn: string;
+  category: string;
+  categoryId: string;
+  subCategory?: string;
+  image: string;
+  cartonCount: number; // e.g. 12 عدد در کارتن
+  price: number; // Product wholesale price in Tomans
+  consumerPrice: number; // Price for consumers
+  discountPercent: number;
+  inStock: boolean;
+  stockCount: number;
+  description?: string;
+  specs?: { label: string; value: string }[];
+}
 
-export type OrderStatus =
-  | 'ثبت شده'
-  | 'در حال بررسی'
-  | 'تأیید شده'
-  | 'آماده ارسال'
-  | 'ارسال شده'
-  | 'تحویل شده'
-  | 'لغو شده';
+export interface Category {
+  id: string;
+  name: string;
+  image: string;
+  iconName?: string;
+}
 
 export interface Brand {
   id: string;
-  name: string; // e.g. کدکس, آمبرلا, پیکسلی, ...
-  englishName: string;
-  logoColor: string; // Tailwind background gradient/color for placeholder
-  imageUrl?: string; // Brand logo URL (small square, shown on the banner)
-  bannerImageUrl?: string; // Wide banner/cover image for the dedicated brand page
-  active: boolean;
+  nameFa: string;
+  nameEn: string;
+  logo: string;
+  banner?: string;
+  description?: string;
+  gradient?: string;
 }
 
-export interface Product {
+export interface PackageBundle {
   id: string;
-  code: string; // e.g. PRD-101
-  name: string; // Persian full name
-  brand: string; // e.g. کدکس
-  category: string; // e.g. بهداشت زناشویی, مراقبت پوست, بهداشت دهان, ...
-  imageColor: string; // Solid background/accent color for image box
-  imageUrl?: string; // Product photo URL
-  iconType: string; // Icon identifier for visual mock fallback
-  cartonQuantity: number; // تعداد در کارتن/بسته
-  price: number; // قیمت عمده (تومان) برای هر کارتن/بسته
-  unitPrice: number; // قیمت تک فروشی/مصرف‌کننده یا واحد
-  inStock: boolean;
-  stockCount: number; // تعداد کارتن موجود
-  specialOffer: boolean;
-  discountPercentage?: number;
-  isNew?: boolean;
-  description: string;
-  active: boolean;
+  title: string;
+  itemTypesCount: number;
+  image: string;
+  discountPercent: number;
+  price: number;
+  consumerPrice: number;
+  expiresInDays: number;
+  items: { productName: string; qty: number; unitPrice: number; productId?: string }[];
 }
 
 export interface CartItem {
   product: Product;
-  quantity: number; // Number of cartons
-}
-
-export interface Customer {
-  id: string;
-  code: string; // e.g. CUST-40892
-  firstName?: string;
-  lastName?: string;
-  password?: string;
-  storeName: string; // e.g. داروخانه دکتر رضایی
-  ownerName: string; // e.g. دکتر علی رضایی
-  phone: string;
-  businessType: BusinessType;
-  address: string;
-  marketerName: string; // نام ویزیتور
-  marketerPhone: string; // شماره ویزیتور
-  active: boolean;
-}
-
-export interface OrderItem {
-  id: string;
-  orderId: string;
-  productId: string;
-  productName: string;
-  brand: string;
-  quantity: number; // تعداد کارتن
-  cartonQuantity: number; // تعداد در کارتن
-  unitPrice: number; // قیمت هر کارتن
-  totalPrice: number;
+  quantity: number; // Number of units or cartons
 }
 
 export interface Order {
   id: string;
-  orderNumber: string; // e.g. SS-14030521
-  customerId: string;
+  orderNumber: string;
+  date: string;
+  time?: string;
+  storeName?: string;
+  storeLogo?: string;
+  itemsCount: number;
+  totalAmount: number;
+  status: 'pending' | 'confirmed' | 'shipping' | 'delivered';
+  statusText: string;
+  items: { productName: string; quantity: number; unitPrice: number; productId?: string }[];
+  deliveryAddress: string;
+  paymentMethod: string;
+  rating?: number;
+  ratingComment?: string;
+}
+
+export interface VisitorInfo {
+  name: string;
+  code: string;
+  phone: string;
+  region: string;
+  avatar: string;
+  rating: number;
+  status: 'online' | 'busy' | 'offline';
+}
+
+export interface UserProfileData {
   storeName: string;
-  orderDate: string; // e.g. ۱۴۰۳/۰۵/۱۰ - ۱۴:۳۰
-  items: OrderItem[];
-  initialAmount: number;
-  discount: number;
-  finalAmount: number;
-  status: OrderStatus;
-  customerNote?: string;
-  adminNote?: string;
+  customerCode: string;
+  ownerName: string;
+  phone: string;
+  address: string;
+  city: string;
+  creditLimit: number; // Total credit limit in Tomans
+  creditUsed: number; // Used credit in Tomans
+  licenseNumber: string;
 }
 
-export type ActiveTab = 'home' | 'products' | 'orders' | 'visitor' | 'account';
-export type ViewScreen =
-  | 'login'
-  | 'home'
-  | 'products'
-  | 'product-detail'
-  | 'cart'
-  | 'checkout'
-  | 'order-success'
-  | 'my-orders'
-  | 'visitor'
-  | 'account'
-  | 'admin';
-
-export interface FilterOptions {
-  brand: string;
-  category: string;
-  inStockOnly: boolean;
-  specialOfferOnly: boolean;
-  isNewOnly: boolean;
-  searchQuery: string;
-}
+export type TabType = 'home' | 'products' | 'orders' | 'visitor' | 'profile';

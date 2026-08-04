@@ -178,6 +178,47 @@ export default {
         return json({ brands: (rows.results as any[]).map(brandToJson) });
       }
 
+      // --- PUBLIC: GET WEEKLY OFFERS (with items) ---
+      if (path === '/api/weekly-offers' && method === 'GET') {
+        const offers = await env.DB.prepare(
+          'SELECT * FROM weekly_offers WHERE active = 1 ORDER BY created_at DESC',
+        ).all();
+        const offerRows = offers.results as any[];
+        if (offerRows.length === 0) return json({ offers: [] });
+
+        const offerIds = offerRows.map((o) => o.id);
+        const placeholders = offerIds.map(() => '?').join(',');
+        const itemsResult = await env.DB.prepare(
+          `SELECT woi.offer_id, woi.quantity, p.id as product_id, p.name as product_name, p.unit_price
+           FROM weekly_offer_items woi
+           JOIN products p ON p.id = woi.product_id
+           WHERE woi.offer_id IN (${placeholders})`,
+        )
+          .bind(...offerIds)
+          .all();
+        const itemsByOffer: Record<string, any[]> = {};
+        for (const it of itemsResult.results as any[]) {
+          if (!itemsByOffer[it.offer_id]) itemsByOffer[it.offer_id] = [];
+          itemsByOffer[it.offer_id].push({
+            productId: it.product_id,
+            productName: it.product_name,
+            qty: it.quantity,
+            unitPrice: it.unit_price,
+          });
+        }
+        const result = offerRows.map((o) => ({
+          id: o.id,
+          title: o.title,
+          imageUrl: o.image_url,
+          discountPercentage: o.discount_percentage,
+          price: o.price,
+          consumerPrice: o.consumer_price,
+          expiresAt: o.expires_at,
+          items: itemsByOffer[o.id] || [],
+        }));
+        return json({ offers: result });
+      }
+
       // --- PUBLIC: GET APP SETTINGS (banner, messages, etc) ---
       if (path === '/api/settings' && method === 'GET') {
         const rows = await env.DB.prepare('SELECT key, value FROM app_settings').all();
@@ -262,6 +303,8 @@ export default {
         (path === '/api/brands' && method !== 'GET') ||
         path.startsWith('/api/brands/') ||
         (path === '/api/settings' && method !== 'GET') ||
+        (path === '/api/weekly-offers' && method !== 'GET') ||
+        path.startsWith('/api/weekly-offers/') ||
         /^\/api\/orders\/\d+\/status$/.test(path);
 
       if (requiresAdmin && path !== '/api/admin/login' && !isAuthorized(request, env)) {
@@ -445,6 +488,75 @@ export default {
       if (brandMatch && method === 'DELETE') {
         const id = brandMatch[1];
         await env.DB.prepare('UPDATE brands SET active = 0 WHERE id = ?').bind(id).run();
+        return json({ ok: true });
+      }
+
+      // --- ADMIN: CREATE WEEKLY OFFER (with items) ---
+      if (path === '/api/weekly-offers' && method === 'POST') {
+        const b = await request.json<any>();
+        const id = b.id || genId('wo');
+        await env.DB.prepare(
+          `INSERT INTO weekly_offers (id, title, image_url, discount_percentage, price, consumer_price, expires_at, active)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        )
+          .bind(
+            id,
+            b.title,
+            b.imageUrl || '',
+            b.discountPercentage || 0,
+            b.price || 0,
+            b.consumerPrice || 0,
+            b.expiresAt || null,
+            b.active === false ? 0 : 1,
+          )
+          .run();
+        for (const item of b.items || []) {
+          await env.DB.prepare(
+            'INSERT INTO weekly_offer_items (id, offer_id, product_id, quantity) VALUES (?, ?, ?, ?)',
+          )
+            .bind(genId('woi'), id, item.productId, item.quantity || 1)
+            .run();
+        }
+        return json({ ok: true, id }, 201);
+      }
+
+      // --- ADMIN: UPDATE WEEKLY OFFER ---
+      const offerMatch = path.match(/^\/api\/weekly-offers\/([^/]+)$/);
+      if (offerMatch && method === 'PUT') {
+        const id = offerMatch[1];
+        const b = await request.json<any>();
+        await env.DB.prepare(
+          `UPDATE weekly_offers SET title=?, image_url=?, discount_percentage=?, price=?, consumer_price=?, expires_at=?, active=?
+           WHERE id=?`,
+        )
+          .bind(
+            b.title,
+            b.imageUrl || '',
+            b.discountPercentage || 0,
+            b.price || 0,
+            b.consumerPrice || 0,
+            b.expiresAt || null,
+            b.active === false ? 0 : 1,
+            id,
+          )
+          .run();
+        if (b.items) {
+          await env.DB.prepare('DELETE FROM weekly_offer_items WHERE offer_id = ?').bind(id).run();
+          for (const item of b.items) {
+            await env.DB.prepare(
+              'INSERT INTO weekly_offer_items (id, offer_id, product_id, quantity) VALUES (?, ?, ?, ?)',
+            )
+              .bind(genId('woi'), id, item.productId, item.quantity || 1)
+              .run();
+          }
+        }
+        return json({ ok: true });
+      }
+
+      // --- ADMIN: DELETE WEEKLY OFFER (soft delete) ---
+      if (offerMatch && method === 'DELETE') {
+        const id = offerMatch[1];
+        await env.DB.prepare('UPDATE weekly_offers SET active = 0 WHERE id = ?').bind(id).run();
         return json({ ok: true });
       }
 

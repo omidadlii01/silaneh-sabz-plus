@@ -1,0 +1,356 @@
+import React, { useState, useEffect } from 'react';
+
+interface NotificationsModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+type CategoryType = 'all' | 'orders' | 'wallet' | 'offers' | 'products';
+
+interface NotificationItem {
+  id: string;
+  category: CategoryType;
+  title: string;
+  body: string;
+  time: string;
+  unread: boolean;
+  icon: string;
+  amount?: string;
+  actionText?: string;
+  badgeText?: string;
+  badgeColor?: string;
+}
+
+const INITIAL_NOTIFICATIONS: NotificationItem[] = [
+  {
+    id: 'n1',
+    category: 'offers',
+    title: 'دریافت اعتبار هدیه ثبت‌نام',
+    body: 'مبلغ ۵۰۰,۰۰۰ تومان اعتبار هدیه به کیف پول شما افزوده شد. می‌توانید در خرید بعدی از آن استفاده کنید.',
+    time: '۱۱ مرداد ۱۴۰۵ - ۱۰:۱۵',
+    unread: true,
+    icon: 'card_giftcard',
+    amount: '+۵۰۰,۰۰۰ تومان',
+    badgeText: 'اعتبار هدیه',
+    badgeColor: 'bg-[#ecfdf5] text-[#006c4a] border-[#006c4a]/30',
+  },
+  {
+    id: 'n2',
+    category: 'orders',
+    title: 'سفارش شماره SLN-۴۰۳۰۸۱۲ بارگیری شد',
+    body: 'سفارش کارتنی شما تحویل موزع منطقه گردید و حداکثر تا عصر امروز به مقصد تحویل داده می‌شود.',
+    time: '۱۰ مرداد ۱۴۰۵ - ۱۶:۴۵',
+    unread: true,
+    icon: 'local_shipping',
+    badgeText: 'تحویل موزع',
+    badgeColor: 'bg-[#eff6ff] text-[#2563eb] border-[#2563eb]/30',
+  },
+  {
+    id: 'n3',
+    category: 'wallet',
+    title: 'افزایش موجودی کیف پول',
+    body: 'مبلغ ۲,۵۰۰,۰۰۰ تومان بابت برگشت بدهی پکیج قبلی به کیف پول حساب تجاری شما واریز شد.',
+    time: '۰۸ مرداد ۱۴۰۵ - ۱۲:۳۰',
+    unread: false,
+    icon: 'account_balance_wallet',
+    amount: '+۲,۵۰۰,۰۰۰ تومان',
+    badgeText: 'واریز به کیف پول',
+    badgeColor: 'bg-[#ecfdf5] text-[#006c4a] border-[#006c4a]/30',
+  },
+  {
+    id: 'n4',
+    category: 'products',
+    title: 'تخفیف ویژه ۲۷٪ محصولات کامان و کدکس',
+    body: 'جشنواره تخفیفات تابستانه سیلانه سبز فعال شد. با ثبت سفارش کارتنی بالای ۵۰ کارتن از ۱۰٪ تخفیف مازاد بهره‌مند شوید.',
+    time: '۰۷ مرداد ۱۴۰۵ - ۰۹:۰۰',
+    unread: false,
+    icon: 'sell',
+    badgeText: 'جشنواره فروش',
+    badgeColor: 'bg-[#fef2f2] text-[#dc2626] border-[#dc2626]/30',
+  },
+  {
+    id: 'n5',
+    category: 'orders',
+    title: 'تأیید فاکتور رسمی سفارش SLN-۴۰۳۰۷۹۰',
+    body: 'فاکتور رسمی سفارش شما توسط واحد حسابداری سیلانه سبز صادر و فایل PDF آن آماده دانلود است.',
+    time: '۰۵ مرداد ۱۴۰۵ - ۱۴:۲۰',
+    unread: false,
+    icon: 'receipt_long',
+    badgeText: 'فاکتور رسمی',
+    badgeColor: 'bg-[#f8fafc] text-[#475569] border-[#cbd5e1]',
+  },
+  {
+    id: 'n6',
+    category: 'offers',
+    title: 'جشنواره قرعه‌کشی داروخانه‌های برتر',
+    body: 'با خرید هر ۱۰ کارتن از برندهای چین‌چین و ربیع، یک شانس در قرعه‌کشی جوایز ویژه پایان ماه دریافت کنید.',
+    time: '۰۲ مرداد ۱۴۰۵ - ۱۱:۱۰',
+    unread: false,
+    icon: 'military_tech',
+    badgeText: 'قرعه‌کشی',
+    badgeColor: 'bg-[#fffbe2] text-[#b45309] border-[#fde047]',
+  },
+  {
+    id: 'n7',
+    category: 'products',
+    title: 'موجودی جدید دستمال مرطوب و خمیردندان',
+    body: 'محصولات پرفروش پنسن و دنتامکس مجدداً شارژ شدند. می‌توانید هم‌اکنون سفارش خود را ثبت کنید.',
+    time: '۲۸ تیر ۱۴۰۵ - ۰۸:۴۵',
+    unread: false,
+    icon: 'inventory_2',
+    badgeText: 'شارژ موجودی',
+    badgeColor: 'bg-[#f0fdf4] text-[#16a34a] border-[#16a34a]/30',
+  },
+];
+
+export const NotificationsModal: React.FC<NotificationsModalProps> = ({ isOpen, onClose }) => {
+  const [activeTab, setActiveTab] = useState<CategoryType>('all');
+  const [notifications, setNotifications] = useState<NotificationItem[]>(INITIAL_NOTIFICATIONS);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+  const [canScrollLeft, setCanScrollLeft] = useState(true);
+  const tabsRef = React.useRef<HTMLDivElement>(null);
+
+  const checkScroll = () => {
+    if (!tabsRef.current) return;
+    const { scrollLeft, scrollWidth, clientWidth } = tabsRef.current;
+    const absScroll = Math.abs(scrollLeft);
+    const maxScroll = scrollWidth - clientWidth;
+    
+    // In RTL, 0 or max is start point depending on browser. absScroll > 10 means scrolled left away from start.
+    setCanScrollRight(absScroll > 10);
+    setCanScrollLeft(absScroll < maxScroll - 10);
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      setTimeout(checkScroll, 100);
+    }
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
+  const handleScrollTabs = (direction: 'left' | 'right') => {
+    if (tabsRef.current) {
+      const amount = direction === 'left' ? -180 : 180;
+      tabsRef.current.scrollBy({ left: amount, behavior: 'smooth' });
+      setTimeout(checkScroll, 350);
+    }
+  };
+
+  const tabs: { id: CategoryType; label: string; icon: string }[] = [
+    { id: 'all', label: 'همه', icon: 'mark_as_unread' },
+    { id: 'orders', label: 'سفارشات', icon: 'package_2' },
+    { id: 'wallet', label: 'تراکنش‌ها و کیف پول', icon: 'account_balance_wallet' },
+    { id: 'offers', label: 'اعتبار و جشنواره‌ها', icon: 'loyalty' },
+    { id: 'products', label: 'کالاها و تخفیفات', icon: 'local_offer' },
+  ];
+
+  const handleMarkAllRead = () => {
+    setNotifications((prev) => prev.map((item) => ({ ...item, unread: false })));
+  };
+
+  const handleToggleRead = (id: string) => {
+    setNotifications((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, unread: !item.unread } : item))
+    );
+  };
+
+  const handleDeleteNotification = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setNotifications((prev) => prev.filter((item) => item.id !== id));
+  };
+
+  const filteredNotifications =
+    activeTab === 'all'
+      ? notifications
+      : notifications.filter((item) => item.category === activeTab);
+
+  const totalUnread = notifications.filter((item) => item.unread).length;
+
+  const getUnreadCountByTab = (tabId: CategoryType) => {
+    if (tabId === 'all') return totalUnread;
+    return notifications.filter((item) => item.category === tabId && item.unread).length;
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-white max-w-[448px] mx-auto flex flex-col h-full animate-in fade-in duration-200 text-right overflow-hidden border-x border-[#e2e8f0]/60">
+      {/* Top Header */}
+      <div className="p-3.5 bg-white border-b border-[#e2e8f0]/80 flex items-center justify-between sticky top-0 z-10 shadow-2xs">
+        <div className="flex items-center gap-2.5">
+          <button
+            onClick={onClose}
+            className="p-2 rounded-full hover:bg-[#f1f5f9] text-[#171c1f] transition-colors flex items-center justify-center active:scale-95"
+            aria-label="بازگشت"
+          >
+            <span className="material-symbols-outlined text-[24px]">arrow_forward</span>
+          </button>
+          <div className="flex items-center gap-2">
+            <h1 className="font-extrabold text-[17px] text-[#171c1f]">پیام‌ها</h1>
+            {totalUnread > 0 && (
+              <span className="bg-[#ba1a1a] text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full shadow-xs">
+                {totalUnread} خوانده نشده
+              </span>
+            )}
+          </div>
+        </div>
+
+        {totalUnread > 0 && (
+          <button
+            onClick={handleMarkAllRead}
+            className="text-[11px] font-bold text-[#006c4a] hover:text-[#005238] flex items-center gap-1 bg-[#e6f4ed] hover:bg-[#d8edd3] px-2.5 py-1.5 rounded-xl transition-all active:scale-95"
+          >
+            <span className="material-symbols-outlined text-[15px]">done_all</span>
+            <span>خوانده شد</span>
+          </button>
+        )}
+      </div>
+
+      {/* Horizontal Tabs Navigation with Dynamic Left/Right Scroll Arrows */}
+      <div className="bg-[#f8fafc] border-b border-[#e2e8f0] py-2.5 sticky top-[61px] z-10 relative group">
+        {/* Right Scroll Arrow Button (shown when scrolled left) */}
+        {canScrollRight && (
+          <div className="absolute right-0 top-0 bottom-0 flex items-center pr-2 pl-4 bg-gradient-to-l from-[#f8fafc] via-[#f8fafc]/80 to-transparent z-10 animate-in fade-in duration-200">
+            <button
+              onClick={() => handleScrollTabs('right')}
+              className="w-7 h-7 rounded-full bg-white border border-[#006c4a]/30 shadow-xs hover:bg-[#e6f4ed] hover:border-[#006c4a] text-[#006c4a] flex items-center justify-center transition-all active:scale-90"
+              title="بازگشت به ابتدا"
+              aria-label="بازگشت به ابتدا"
+            >
+              <span className="material-symbols-outlined text-[18px]">chevron_right</span>
+            </button>
+          </div>
+        )}
+
+        {/* Scrollable Tabs Container */}
+        <div
+          ref={tabsRef}
+          onScroll={checkScroll}
+          className="px-3 overflow-x-auto no-scrollbar scroll-smooth flex items-center gap-2"
+        >
+          {tabs.map((tab) => {
+            const count = getUnreadCountByTab(tab.id);
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-[12px] font-extrabold transition-all shrink-0 active:scale-95 ${
+                  isActive
+                    ? 'bg-[#006c4a] text-white shadow-xs'
+                    : 'bg-white text-[#475569] border border-[#e2e8f0] hover:bg-[#f1f5f9] hover:text-[#1e293b]'
+                }`}
+              >
+                <span className={`material-symbols-outlined text-[16px] ${isActive ? 'text-white' : 'text-[#006c4a]'}`}>
+                  {tab.icon}
+                </span>
+                <span className="whitespace-nowrap">{tab.label}</span>
+                {count > 0 && (
+                  <span
+                    className={`ml-1 text-[10px] font-extrabold px-1.5 py-0.2 rounded-full ${
+                      isActive ? 'bg-white text-[#006c4a]' : 'bg-[#ba1a1a] text-white'
+                    }`}
+                  >
+                    {count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Small Round Left Scroll Arrow with Fade Overlay */}
+        {canScrollLeft && (
+          <div className="absolute left-0 top-0 bottom-0 flex items-center pl-2 pr-4 bg-gradient-to-r from-[#f8fafc] via-[#f8fafc]/80 to-transparent z-10 animate-in fade-in duration-200">
+            <button
+              onClick={() => handleScrollTabs('left')}
+              className="w-7 h-7 rounded-full bg-white border border-[#006c4a]/30 shadow-xs hover:bg-[#e6f4ed] hover:border-[#006c4a] text-[#006c4a] flex items-center justify-center transition-all active:scale-90"
+              title="مشاهده بخش‌های دیگر"
+              aria-label="مشاهده بخش‌های دیگر"
+            >
+              <span className="material-symbols-outlined text-[18px]">chevron_left</span>
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Notifications Content Area */}
+      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 pb-20 bg-[#f8fafc]">
+        {filteredNotifications.length > 0 ? (
+          filteredNotifications.map((n) => (
+            <div
+              key={n.id}
+              onClick={() => handleToggleRead(n.id)}
+              className={`p-4 rounded-2xl border transition-all text-right relative group cursor-pointer ${
+                n.unread
+                  ? 'bg-white border-[#006c4a]/40 shadow-xs ring-1 ring-[#006c4a]/10'
+                  : 'bg-white/80 border-[#e2e8f0] hover:border-[#cbd5e1]'
+              }`}
+            >
+              {/* Card Header: Icon + Title + Time */}
+              <div className="flex items-start justify-between gap-3 mb-2">
+                <div className="flex items-start gap-2.5 flex-1">
+                  <div
+                    className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
+                      n.unread ? 'bg-[#e6f4ed] text-[#006c4a]' : 'bg-[#f1f5f9] text-[#64748b]'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-[20px]">{n.icon}</span>
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className={`text-[13px] font-extrabold leading-snug ${n.unread ? 'text-[#0f172a]' : 'text-[#334155]'}`}>
+                        {n.title}
+                      </h3>
+                      {n.badgeText && (
+                        <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded-md border ${n.badgeColor}`}>
+                          {n.badgeText}
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-[10px] text-[#94a3b8] font-bold block mt-0.5">{n.time}</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1 shrink-0">
+                  {n.unread && <span className="w-2.5 h-2.5 rounded-full bg-[#006c4a] animate-pulse" title="خوانده نشده" />}
+                  <button
+                    onClick={(e) => handleDeleteNotification(n.id, e)}
+                    className="p-1 rounded-lg text-[#cbd5e1] hover:text-[#ba1a1a] hover:bg-[#fef2f2] transition-colors"
+                    title="حذف پیام"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">delete</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Body */}
+              <p className="text-[12px] text-[#475569] leading-relaxed pr-11 pl-2 mb-2 font-medium">
+                {n.body}
+              </p>
+
+              {/* Amount tag if present */}
+              {n.amount && (
+                <div className="pr-11 flex items-center justify-start">
+                  <span className="inline-flex items-center gap-1 text-[12px] font-extrabold text-[#006c4a] bg-[#f0fdf4] px-2.5 py-1 rounded-lg border border-[#006c4a]/20">
+                    <span className="material-symbols-outlined text-[16px]">payments</span>
+                    <span>{n.amount}</span>
+                  </span>
+                </div>
+              )}
+            </div>
+          ))
+        ) : (
+          <div className="text-center py-16 bg-white rounded-2xl border border-dashed border-[#cbd5e1] p-6 mt-4">
+            <span className="material-symbols-outlined text-[48px] text-[#94a3b8] mb-2">
+              notifications_off
+            </span>
+            <p className="text-[14px] font-bold text-[#475569] mb-1">هیچ پیام جدیدی در این بخش وجود ندارد!</p>
+            <p className="text-[11px] text-[#94a3b8]">
+              اطلاعیه‌ها و پیام‌های جدید مربوط به {tabs.find((t) => t.id === activeTab)?.label} در این قسمت قرار می‌گیرند.
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
