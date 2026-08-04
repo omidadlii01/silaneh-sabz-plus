@@ -24,8 +24,8 @@ export const BottomNav: React.FC = () => {
   };
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-30 bg-white/90 backdrop-blur-xl border-t border-[#e2e8f0] shadow-[0_-4px_16px_rgba(0,0,0,0.04)] pb-safe">
-      <div className="max-w-md mx-auto h-16 flex items-center justify-around px-2">
+    <div className="fixed bottom-3 left-1/2 -translate-x-1/2 w-[calc(100%-24px)] max-w-[424px] z-40 p-[2px] rounded-2xl bg-gradient-to-r from-[#10b981] via-[#34d399] to-[#059669] shadow-[0_0_20px_rgba(16,185,129,0.35),0_10px_25px_-5px_rgba(0,108,74,0.3)]">
+      <nav className="w-full bg-[#f4fbf7]/95 backdrop-blur-2xl rounded-[14px] h-16 px-1 flex items-center justify-around">
         {navItems.map((item) => {
           const isActive = activeTab === item.id && viewScreen !== 'admin';
 
@@ -33,31 +33,26 @@ export const BottomNav: React.FC = () => {
             <button
               key={item.id}
               onClick={() => handleTabClick(item.id)}
-              className="flex flex-col items-center justify-center flex-1 py-1.5 transition-all duration-200 relative"
+              className={`flex flex-col items-center justify-center flex-1 h-full px-1 active:scale-95 transition-all relative ${
+                isActive ? 'text-[#006c4a]' : 'text-[#6f7973]'
+              }`}
             >
-              <div
-                className={`px-3.5 py-0.5 rounded-full transition-all ${
-                  isActive ? 'bg-[#82f5c1]/30' : ''
-                }`}
-              >
-                <Icon
-                  name={item.icon}
-                  size={22}
-                  className={isActive ? 'text-[#006c4a]' : 'text-[#6f7973]'}
-                  style={isActive ? { fill: 'currentColor', fillOpacity: 0.15 } : undefined}
-                />
-              </div>
-              <span
-                className={`text-[10.5px] mt-0.5 leading-none ${
-                  isActive ? 'font-black text-[#022c22]' : 'font-semibold text-[#6f7973]'
-                }`}
-              >
+              {isActive && (
+                <span className="absolute top-1.5 inset-x-4 h-1 bg-[#006c4a] rounded-full shadow-[0_0_8px_rgba(0,108,74,0.6)]" />
+              )}
+              <Icon
+                name={item.icon}
+                size={22}
+                className="mb-0.5"
+                style={isActive ? { fill: 'currentColor', fillOpacity: 0.15 } : undefined}
+              />
+              <span className={`text-[10.5px] leading-none ${isActive ? 'font-black' : 'font-semibold'}`}>
                 {item.label}
               </span>
             </button>
           );
         })}
-      </div>
-    </nav>
+      </nav>
+    </div>
   );
 };

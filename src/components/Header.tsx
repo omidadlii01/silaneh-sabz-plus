@@ -10,7 +10,7 @@ export const Header: React.FC = () => {
   const isSubPage = ['product-detail', 'checkout', 'order-success'].includes(viewScreen);
 
   return (
-    <header className="bg-white/85 backdrop-blur-xl sticky top-0 z-30 border-b border-[#e2e8f0] flex justify-between items-center px-4 py-2.5 w-full max-w-md mx-auto h-16 shadow-sm">
+    <header className="bg-white/85 backdrop-blur-xl sticky top-0 z-30 border-b border-x border-[#e2e8f0] rounded-b-2xl flex justify-between items-center px-4 py-2.5 w-full max-w-md mx-auto h-16 shadow-sm">
       {/* Right side (RTL): back button on sub-pages, otherwise logo + brand name */}
       <div className="flex items-center gap-2.5 flex-row-reverse">
         {isSubPage ? (
