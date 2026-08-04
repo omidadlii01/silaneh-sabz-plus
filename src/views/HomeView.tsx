@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { AppBanner } from '../components/AppBanner';
-import { StatusBadge } from '../components/StatusBadge';
 import { Icon } from '../components/Icon';
 import { Product } from '../types';
 import { formatCurrency, toPersianDigits, resolveAssetUrl } from '../utils';
@@ -325,32 +324,19 @@ const HomeProductSection: React.FC<{
 // ---- Brands grid (real brands from D1) -------------------------------------
 
 const HomeBrandsGrid: React.FC<{ brands: any[] }> = ({ brands }) => {
-  const { navigateTo, updateFilter } = useApp();
   if (brands.length === 0) return null;
 
   return (
     <section>
-      <div className="flex justify-between items-center mb-3">
-        <div className="flex items-center gap-1.5 flex-row-reverse">
-          <h2 className="font-['Vazirmatn'] text-[16px] font-extrabold text-[#022c22]">
-            برندهای سیلانه سبز
-          </h2>
-          <Icon name="military_tech" size={20} className="text-[#006c4a]" />
-        </div>
-        <button
-          onClick={() => {
-            updateFilter('brand', 'همه');
-            navigateTo('products');
-          }}
-          className="text-[#006c4a] text-[12px] font-bold flex items-center gap-0.5 hover:underline"
-        >
-          مشاهده همه
-          <Icon name="chevron_left" size={16} />
-        </button>
+      <div className="flex items-center gap-1.5 flex-row-reverse mb-3">
+        <h2 className="font-['Vazirmatn'] text-[16px] font-extrabold text-[#022c22]">
+          برندهای سیلانه سبز
+        </h2>
+        <Icon name="military_tech" size={20} className="text-[#006c4a]" />
       </div>
 
       <div className="grid grid-cols-4 gap-2.5">
-        {brands.slice(0, 8).map((brand) => (
+        {brands.map((brand) => (
           <HomeBrandTile key={brand.id} brand={brand} />
         ))}
       </div>
@@ -392,6 +378,93 @@ const HomeBrandTile: React.FC<{ brand: any }> = ({ brand }) => {
       {brand.englishName && (
         <span className="text-[9px] text-[#6f7973] truncate w-full">{brand.englishName}</span>
       )}
+    </div>
+  );
+};
+
+// ---- Twin promo boxes (below brands section) --------------------------------
+// Box 1: rotating carousel of 3 real, data-derived promotions (no fake banner
+// content model exists in D1, so these are computed from real catalog data).
+// Box 2: single real promo pointing to the best current special-offer product.
+
+interface WeeklyAd {
+  key: string;
+  title: string;
+  value: string;
+  subtitle: string;
+  onClick: () => void;
+}
+
+const HomeWeeklyOfferBox: React.FC<{ ads: WeeklyAd[] }> = ({ ads }) => {
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    if (ads.length <= 1) return;
+    const id = setInterval(() => setIndex((prev) => (prev + 1) % ads.length), 4000);
+    return () => clearInterval(id);
+  }, [ads.length]);
+
+  useEffect(() => {
+    if (index >= ads.length) setIndex(0);
+  }, [ads.length, index]);
+
+  if (ads.length === 0) return null;
+  const ad = ads[Math.min(index, ads.length - 1)];
+
+  return (
+    <div
+      onClick={ad.onClick}
+      className="bg-gradient-to-br from-[#0F5338] to-[#006c4a] rounded-2xl p-4 flex flex-col justify-between h-[168px] cursor-pointer active:scale-[0.98] transition-transform shadow-md relative overflow-hidden text-right"
+    >
+      <div className="flex items-center justify-between">
+        <span className="text-white font-extrabold text-[13px]">آفر هفته</span>
+        <Icon name="auto_awesome" size={18} className="text-white/80" />
+      </div>
+
+      <div>
+        <div className="text-white font-black text-[19px] leading-tight">{ad.value}</div>
+        <div className="text-white/75 text-[11px] font-semibold mt-0.5">{ad.subtitle}</div>
+      </div>
+
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          ad.onClick();
+        }}
+        className="bg-white text-[#006c4a] rounded-full py-1.5 px-4 text-[11.5px] font-extrabold w-fit active:scale-95 transition-all shadow-xs"
+      >
+        ثبت سفارش
+      </button>
+
+      {ads.length > 1 && (
+        <div className="absolute bottom-2 left-3 flex items-center gap-1">
+          {ads.map((a, i) => (
+            <span
+              key={a.key}
+              className={`transition-all rounded-full ${
+                i === index ? 'w-3 h-1 bg-white' : 'w-1 h-1 bg-white/40'
+              }`}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const HomeGiftBox: React.FC<{ product?: Product; onClick: () => void }> = ({ product, onClick }) => {
+  return (
+    <div
+      onClick={onClick}
+      className="bg-[#f6fafe] border border-[#bec9c2]/30 rounded-2xl p-4 flex flex-col items-center justify-center gap-2 h-[168px] cursor-pointer active:scale-[0.98] transition-transform text-center"
+    >
+      <Icon name="card_giftcard" size={56} className="text-[#006c4a]" />
+      <div className="text-[#171c1f] font-extrabold text-[13px] leading-tight">
+        {product ? 'پکیج‌های پیشنهادی' : 'پکیج‌ها'}
+      </div>
+      <div className="text-[#6f7973] text-[10.5px] font-semibold leading-tight line-clamp-1">
+        {product ? product.name : 'به‌زودی پکیج‌های ویژه'}
+      </div>
     </div>
   );
 };
@@ -585,13 +658,10 @@ const HomeFeaturedOffer: React.FC<{ product: Product }> = ({ product }) => {
 
 export const HomeView: React.FC = () => {
   const {
-    currentCustomer,
     products,
     brands,
-    orders,
     navigateTo,
     updateFilter,
-    reorder,
     catalogError,
     isLoadingCatalog,
     retryLoadCatalog,
@@ -623,6 +693,36 @@ export const HomeView: React.FC = () => {
     .sort((a, b) => b.count - a.count);
   const rowCategories = rankedCategories.slice(0, 3);
 
+  const weeklyAds: WeeklyAd[] = [
+    {
+      key: 'max-discount',
+      title: 'آفر هفته',
+      value: maxDiscount > 0 ? `تا ${toPersianDigits(maxDiscount)}٪ سود` : 'تخفیف‌های ویژه',
+      subtitle: 'محصولات دارای تخفیف ویژه',
+      onClick: () => {
+        updateFilter('specialOfferOnly', true);
+        navigateTo('products');
+      },
+    },
+    {
+      key: 'offer-count',
+      title: 'آفر هفته',
+      value: `${toPersianDigits(specialOfferProducts.length)} کالا`,
+      subtitle: 'در حال حاضر با تخفیف ویژه',
+      onClick: () => {
+        updateFilter('specialOfferOnly', true);
+        navigateTo('products');
+      },
+    },
+    {
+      key: 'bulk-discount',
+      title: 'آفر هفته',
+      value: '۵٪ تخفیف اضافه',
+      subtitle: `سفارش‌های بالای ${formatCurrency(5000000)}`,
+      onClick: () => navigateTo('products'),
+    },
+  ];
+
   const promoSlides: PromoSlide[] = specialOfferProducts.slice(0, 3).map((p) => ({
     key: p.id,
     imageUrl: p.imageUrl,
@@ -632,9 +732,6 @@ export const HomeView: React.FC = () => {
     subTitle: p.brand,
     onClick: () => navigateTo('product-detail', { product: p }),
   }));
-
-  const recentOrders = orders.filter((o) => o.customerId === currentCustomer.id).slice(0, 3);
-  const mostRecentOrder = recentOrders[0];
 
   return (
     <div className="pb-28 pt-4 space-y-7">
@@ -661,22 +758,6 @@ export const HomeView: React.FC = () => {
         </div>
       )}
 
-      {mostRecentOrder && (
-        <div className="mx-4 bg-[#ecfdf5] rounded-xl px-3 py-2 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Icon name="history" size={16} className="text-[#006c4a]" />
-            <span className="text-[11px] font-bold text-[#022c22]">تکرار سفارش قبلی</span>
-          </div>
-          <button
-            onClick={() => reorder(mostRecentOrder)}
-            className="bg-[#006c4a] hover:bg-[#004532] text-white text-[10.5px] font-extrabold px-2.5 py-1 rounded-lg active:scale-95 transition-all flex items-center gap-1"
-          >
-            <span>ثبت مجدد ({toPersianDigits(mostRecentOrder.items.length)} کالا)</span>
-            <Icon name="arrow_back" size={13} />
-          </button>
-        </div>
-      )}
-
       <div className="px-4">
         <HomeSearchBar products={products} />
       </div>
@@ -696,6 +777,11 @@ export const HomeView: React.FC = () => {
 
       <div className="px-4">
         <HomeBrandsGrid brands={brands} />
+      </div>
+
+      <div className="px-4 grid grid-cols-2 gap-3">
+        <HomeWeeklyOfferBox ads={weeklyAds} />
+        <HomeGiftBox product={bestOfferProduct} onClick={() => navigateTo('products')} />
       </div>
 
       {maxDiscount > 0 && (
@@ -762,55 +848,6 @@ export const HomeView: React.FC = () => {
           />
         </div>
       ))}
-
-      {/* Recent orders */}
-      <div className="mx-4 bg-white rounded-2xl border border-[#e2e8f0] p-3.5 shadow-xs">
-        <div className="flex items-center justify-between mb-3 border-b border-[#f1f5f9] pb-2">
-          <div className="flex items-center gap-1.5">
-            <Icon name="schedule" size={18} className="text-[#022c22]" />
-            <h3 className="text-xs font-extrabold text-[#171c1f]">آخرین سفارشات ثبت‌شده</h3>
-          </div>
-          <button
-            onClick={() => navigateTo('my-orders')}
-            className="text-[11px] font-bold text-[#006c4a] hover:underline"
-          >
-            مشاهده سوابق
-          </button>
-        </div>
-
-        {recentOrders.length === 0 ? (
-          <p className="text-xs text-[#6f7973] py-3 text-center">هنوز سفارشی ثبت نشده است.</p>
-        ) : (
-          <div className="space-y-2.5">
-            {recentOrders.map((order) => (
-              <div
-                key={order.id}
-                onClick={() => navigateTo('my-orders', { order })}
-                className="p-2.5 bg-[#f8fafc] hover:bg-[#f0fdf4] border border-[#e2e8f0]/80 rounded-xl flex items-center justify-between cursor-pointer transition-colors"
-              >
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-extrabold text-[#171c1f]">{order.orderNumber}</span>
-                    <StatusBadge status={order.status} size="sm" />
-                  </div>
-                  <div className="text-[11px] text-[#6f7973] mt-1 flex items-center gap-2">
-                    <span>{order.orderDate}</span>
-                    <span>•</span>
-                    <span>{toPersianDigits(order.items.length)} قلم کالا</span>
-                  </div>
-                </div>
-
-                <div className="text-left">
-                  <span className="text-xs font-black text-[#006c4a] block">
-                    {formatCurrency(order.finalAmount)}
-                  </span>
-                  <span className="text-[10px] text-[#6f7973]">نمایش جزئیات</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
     </div>
   );
 };
