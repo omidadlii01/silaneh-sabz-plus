@@ -92,13 +92,43 @@ const HomeSearchBar: React.FC<{ products: Product[] }> = ({ products }) => {
 
 // ---- Category grid (real 6 fixed categories, icon tiles) ------------------
 
-const HOME_CATEGORIES: { name: string; icon: string }[] = [
-  { name: 'مراقبت از کودک', icon: 'child_care' },
-  { name: 'زیبایی و آرایش بانوان', icon: 'auto_awesome' },
-  { name: 'بهداشت و مراقبت‌های جنسی', icon: 'favorite' },
-  { name: 'بهداشت دهان و دندان', icon: 'sentiment_satisfied' },
-  { name: 'مراقبت مو', icon: 'content_cut' },
-  { name: 'مراقبت پوست و بدن', icon: 'water_drop' },
+const HOME_CATEGORIES: { name: string; icon: string; image: string }[] = [
+  {
+    name: 'مراقبت از کودک',
+    icon: 'child_care',
+    image:
+      'https://lh3.googleusercontent.com/aida/AP1WRLsoexzP7uJ81t0yarhpaAf2ctIHhfSOueDUlT89bsx8sPtESrYiV4FSKIC5kFW4lXke35r3hbZTbufqgP7KvHQX9gq71EaIBwgYPKpqJYUQGxOtijBSZdQWO3XYCCRISBFlKorvwv0i7zYANcDyyJ4chQS8UVWcHoE1HgKBnHsJih2fWKOebUcCZfdlJzhAXYzaJdXWcT9fmkAuz73pg9e0yJLoPs2Nf8sF7Sd9d2iqgKnUHiqmCgZLZm0',
+  },
+  {
+    name: 'زیبایی و آرایش بانوان',
+    icon: 'auto_awesome',
+    image:
+      'https://lh3.googleusercontent.com/aida/AP1WRLvf0r5CoWptJHUesY_RRv8VMbDIfk3xLeQu10fBXg5NYABGy9KYGfJz4kUCd5pyUU7DWjYccx9sO-pHxwiBy8YYmu2nKnEGGbeFNh4l8sqboSdPLjiqggUhsuID1m3rdgYJ0l7kVUmFK1wMlHDTI80Vw6AyCtpAypyhfRX8i6hQY5iKaGExZ6ZKBkK-1CP2oa0CwZWv8RhPYKeRmb3fC_Y0eHu-ls4P_TanRwedcXSw0bS_MhBAoLcBeNo',
+  },
+  {
+    name: 'بهداشت و مراقبت‌های جنسی',
+    icon: 'favorite',
+    image:
+      'https://lh3.googleusercontent.com/aida/AP1WRLs1JxN56T0TFEJr3ysl44ZOt_hH17J3o9tXSYLnFd96f2CW_cRE-4JhVspEbIfUD38p23KAeWf-HQMiSi1SH_SjvtuRNUokuQXPzA-nAQOVakH9UvP_wtuqUlhK1R2o7JRK7CFCZrQEnaOy4PP7sF8noE1KBqDtJMr5DWEXvBkVDApr_Mw_SGRJZnz98RqL-2uc_tYLd6Wez9wb0cOZVqX5FOP3_FO6PqshmIFn8zfZcq8yrSFwefzOfEE',
+  },
+  {
+    name: 'بهداشت دهان و دندان',
+    icon: 'sentiment_satisfied',
+    image:
+      'https://lh3.googleusercontent.com/aida/AP1WRLtxYSFczSajR8XvjvHa3jAz7h7e0xTj9h9ly25bcEmL-HhZMyhQVwFHSsf9WYyik7Iw_D2h8BWvxtzC430o-U6qPLEOxGhTQwGT_Sc3J19L3I_4qhJ5_EE6m91Hm4nkYW5S-_yLh7zEQDwJzccrvFBzzjARnv5PTFKUyuxJ7mFudGfPcEppR5jk79UKbLbpgPYfr7lnrP2aDX42TZaU98dDm6jAXVY_2388CH_B6Ef8mIUjf27s95CBuUM',
+  },
+  {
+    name: 'مراقبت مو',
+    icon: 'content_cut',
+    image:
+      'https://lh3.googleusercontent.com/aida/AP1WRLsEEgISFGkUlyaNaADjIq4IKs7kvFwHa4fXHVNBxVaSyV79te88lMpnpfiYI6ANwtRFppCnArhzhj-tT0340MnYZQRJD2DIkY1c_5DoBqU6hJubVOxK3NA2GCS2lsqFI0QDaGSXYtOCd2S9xuk-LhcXAOOD5h4kNeH7kBHKvj9UdKIaUdf-MTt6m1pZ-QBdU5abM7pyzN7nhrvyBl5zPAPY53kQUZWDqb1jkDucEKVkXY-MjysQtJBC5K8',
+  },
+  {
+    name: 'مراقبت پوست و بدن',
+    icon: 'water_drop',
+    image:
+      'https://lh3.googleusercontent.com/aida/AP1WRLvFA2Qk04-_w-uYKkLve6pMCkWzhQhi9-0TexZXpshK_zfsQJZJQm5bCv13Joy9uNFlN4jABZC4vq21Ks8PMgRb0jPJbVKzNomS9rFRRSDNddksLlPY-Ez8Vi17uyHFx508te81NITKJBx6FrWBjnlZEtOzWHyGziBnfbjLSBCl-Q9-RG9au7bnDZVPgVUEjyq5gAxVYwJ1agNJLzKTXihlTGWxSsV5W6V9yTU--xPdPtTNbc4Yb4uWD5I',
+  },
 ];
 
 const HomeCategoryGrid: React.FC = () => {
@@ -115,8 +145,20 @@ const HomeCategoryGrid: React.FC = () => {
             }}
             className="flex flex-col items-center gap-1.5 cursor-pointer group active:scale-95 transition-all duration-200"
           >
-            <div className="aspect-square w-full rounded-2xl bg-[#eaeef2]/40 backdrop-blur-md flex items-center justify-center p-2.5 border border-[#006c4a]/20 group-hover:border-[#006c4a]/50 group-hover:bg-white transition-all shadow-xs">
-              <Icon name={cat.icon} size={30} className="text-[#006c4a]" />
+            <div className="aspect-square w-full rounded-2xl bg-[#eaeef2]/40 backdrop-blur-md flex items-center justify-center p-2.5 border border-[#006c4a]/20 group-hover:border-[#006c4a]/50 group-hover:bg-white transition-all shadow-xs overflow-hidden">
+              <img
+                src={cat.image}
+                alt={cat.name}
+                referrerPolicy="no-referrer"
+                className="w-full h-full object-contain transition-transform group-hover:scale-105"
+                loading="lazy"
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).style.display = 'none';
+                  const sib = (e.currentTarget.nextSibling as HTMLElement) || null;
+                  if (sib) sib.style.display = 'flex';
+                }}
+              />
+              <Icon name={cat.icon} size={30} className="text-[#006c4a] hidden" />
             </div>
             <span className="text-[12px] font-semibold text-center mt-1 leading-tight text-[#171c1f]">
               {cat.name}
@@ -516,9 +558,15 @@ const HomeFeaturedOffer: React.FC<{ product: Product }> = ({ product }) => {
 
         {/* Side promo column */}
         <div className="flex-1 flex flex-col items-center justify-center text-center gap-2 py-4">
-          <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center">
-            <Icon name="redeem" size={26} className="text-white" />
-          </div>
+          <img
+            src="https://lh3.googleusercontent.com/aida/AP1WRLsicdvEjhrxnYb2vDOuNk9y_IfzJWwzO5353ZvoztvRD-5hAT1FccuW-R4kCOuIjsLkXksws7C6l3dRzYbpfzZqFcTeCrO6FODHvnLgYRBVzx_kyY_w5bUHKRDsWhYLYG8czMjLa1sTRx7qE9zekZN2Y2L6KYaQwjqAVxRdSXM95mXHospwQCfLtn_uB1nC9WXOT9QhsbaT9r2_Dsff2Dxd6Wbu-SX1ll7h5fievXcTSR1IT-si8QXYag"
+            alt="پیشنهادهای ویژه"
+            referrerPolicy="no-referrer"
+            className="w-14 h-14 object-contain"
+            onError={(e) => {
+              (e.currentTarget as HTMLImageElement).style.display = 'none';
+            }}
+          />
           <div className="text-white font-bold text-[13px]">پیشنهادهای ویژه</div>
           <button
             onClick={() => navigateTo('products')}
