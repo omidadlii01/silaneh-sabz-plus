@@ -15,10 +15,10 @@ export const Header: React.FC = () => {
     .slice(0, 5);
 
   return (
-    <header className="bg-white/85 backdrop-blur-xl sticky top-0 z-30 border-b border-x border-[#e2e8f0] rounded-b-2xl flex justify-between items-center px-4 py-2.5 w-full max-w-md mx-auto h-16 shadow-sm relative">
-      {/* Right side (RTL): back button on sub-pages, otherwise logo + brand name */}
-      <div className="flex items-center gap-2.5 flex-row-reverse">
-        {isSubPage ? (
+    <header className="bg-white/85 backdrop-blur-xl sticky top-0 z-30 border-b border-x border-[#e2e8f0] rounded-b-2xl grid grid-cols-3 items-center px-4 py-2.5 w-full max-w-md mx-auto h-16 shadow-sm relative">
+      {/* Right column: back button on sub-pages, otherwise empty (logo moved to center) */}
+      <div className="flex items-center justify-start">
+        {isSubPage && (
           <button
             onClick={() => {
               if (viewScreen === 'product-detail') navigateTo('products');
@@ -30,50 +30,63 @@ export const Header: React.FC = () => {
             <Icon name="arrow_forward" size={22} />
             <span>بازگشت</span>
           </button>
-        ) : (
-          <>
-            <div className="flex flex-col text-right">
-              <span className="font-['Vazirmatn'] text-[18px] sm:text-[19px] font-black text-[#022c22] leading-tight">
-                سیلانه <span className="text-[#006c4a] font-black">سبز</span>
-              </span>
-              <span className="text-[10px] text-[#006c4a] font-bold tracking-wide">پلاس B2B</span>
-            </div>
-            <button
-              onClick={() => navigateTo('home')}
-              className="flex items-center justify-center bg-transparent border-none shadow-none"
-            >
-              <SeylanehLogo className="h-10 sm:h-11" />
-            </button>
-          </>
         )}
       </div>
 
-      {/* Left side (RTL): actions */}
-      {!isSubPage && (
-        <div className="flex items-center gap-1.5">
-          <button
-            onClick={() => navigateTo('cart')}
-            className="relative p-2 rounded-full hover:bg-[#f0f4f8] active:scale-95 transition-transform text-[#022c22] flex items-center justify-center"
-            title="سبد خرید"
-            aria-label="سبد خرید"
-          >
-            <Icon name="shopping_cart" size={24} />
-            {cartTotalCount > 0 && (
-              <span className="absolute -top-1 -right-1 bg-[#006c4a] text-white text-[10px] font-extrabold min-w-[20px] h-5 px-0.5 rounded-full flex items-center justify-center border-2 border-white shadow-xs">
-                {toPersianDigits(cartTotalCount)}
-              </span>
-            )}
-          </button>
+      {/* Center column: logo, always centered */}
+      <div className="flex items-center justify-center">
+        <button
+          onClick={() => navigateTo('home')}
+          className="flex items-center justify-center bg-transparent border-none shadow-none"
+        >
+          <SeylanehLogo className="h-10 sm:h-11" />
+        </button>
+      </div>
 
+      {/* Left column: notifications, orders, profile, cart */}
+      {!isSubPage && (
+        <div className="flex items-center justify-end gap-1">
           <button
             onClick={() => setIsNotifOpen((v) => !v)}
             className="relative p-2 rounded-full hover:bg-[#f0f4f8] active:scale-95 transition-transform text-[#022c22] flex items-center justify-center"
             title="اعلان‌ها"
             aria-label="اعلان‌ها"
           >
-            <Icon name="notifications" size={24} />
+            <Icon name="notifications" size={22} />
             {myRecentOrders.some((o) => o.status === 'pending') && (
               <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-[#ba1a1a] rounded-full ring-2 ring-white animate-pulse" />
+            )}
+          </button>
+
+          <button
+            onClick={() => navigateTo('my-orders')}
+            className="relative p-2 rounded-full hover:bg-[#f0f4f8] active:scale-95 transition-transform text-[#022c22] flex items-center justify-center"
+            title="سفارشات"
+            aria-label="سفارشات"
+          >
+            <Icon name="receipt_long" size={22} />
+          </button>
+
+          <button
+            onClick={() => navigateTo('account')}
+            className="relative p-2 rounded-full hover:bg-[#f0f4f8] active:scale-95 transition-transform text-[#022c22] flex items-center justify-center"
+            title="حساب کاربری"
+            aria-label="حساب کاربری"
+          >
+            <Icon name="account_circle" size={22} />
+          </button>
+
+          <button
+            onClick={() => navigateTo('cart')}
+            className="relative p-2 rounded-full hover:bg-[#f0f4f8] active:scale-95 transition-transform text-[#022c22] flex items-center justify-center"
+            title="سبد خرید"
+            aria-label="سبد خرید"
+          >
+            <Icon name="shopping_cart" size={22} />
+            {cartTotalCount > 0 && (
+              <span className="absolute -top-1 -right-1 bg-[#006c4a] text-white text-[10px] font-extrabold min-w-[20px] h-5 px-0.5 rounded-full flex items-center justify-center border-2 border-white shadow-xs">
+                {toPersianDigits(cartTotalCount)}
+              </span>
             )}
           </button>
         </div>
