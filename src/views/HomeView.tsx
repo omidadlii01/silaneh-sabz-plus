@@ -606,6 +606,10 @@ export const HomeView: React.FC = () => {
   const bestOfferProduct = [...specialOfferProducts].sort(
     (a, b) => (b.discountPercentage || 0) - (a.discountPercentage || 0)
   )[0];
+  const maxDiscount = specialOfferProducts.reduce(
+    (max, p) => Math.max(max, p.discountPercentage || 0),
+    0
+  );
 
   const categoryCounts: Record<string, number> = {};
   products.forEach((p) => {
@@ -693,6 +697,38 @@ export const HomeView: React.FC = () => {
       <div className="px-4">
         <HomeBrandsGrid brands={brands} />
       </div>
+
+      {maxDiscount > 0 && (
+        <div className="px-4">
+          <div
+            onClick={() => {
+              updateFilter('specialOfferOnly', true);
+              navigateTo('products');
+            }}
+            className="bg-[#e3f8ee] border border-[#b9ecd2] rounded-2xl px-4 py-3 flex items-center justify-between cursor-pointer active:scale-[0.99] transition-all"
+          >
+            <div className="flex items-center gap-2">
+              <span className="text-[13px] font-extrabold text-[#022c22]">آفر هفته</span>
+              <Icon name="local_fire_department" size={16} className="text-orange-500" />
+            </div>
+            <div className="flex items-center gap-2.5">
+              <span className="text-[11.5px] font-bold text-[#006c4a]">
+                تا {toPersianDigits(maxDiscount)}٪ سود · محصولات کلا
+              </span>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  updateFilter('specialOfferOnly', true);
+                  navigateTo('products');
+                }}
+                className="bg-[#0F5338] hover:bg-[#004532] text-white text-[11px] font-bold px-3 py-1.5 rounded-full active:scale-95 transition-all"
+              >
+                ثبت سفارش
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {promoSlides.length > 0 && (
         <div className="px-4">

@@ -88,7 +88,7 @@ export interface Order {
   adminNote?: string;
 }
 
-export type ActiveTab = 'home' | 'products' | 'orders' | 'account';
+export type ActiveTab = 'home' | 'products' | 'orders' | 'visitor' | 'account';
 export type ViewScreen =
   | 'login'
   | 'home'
@@ -98,6 +98,7 @@ export type ViewScreen =
   | 'checkout'
   | 'order-success'
   | 'my-orders'
+  | 'visitor'
   | 'account'
   | 'admin';
 

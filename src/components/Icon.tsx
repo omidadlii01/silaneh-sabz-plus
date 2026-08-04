@@ -25,6 +25,8 @@ import {
   Scissors,
   Droplet,
   Home,
+  Headset,
+  Bell,
   LucideIcon,
   HelpCircle,
 } from 'lucide-react';
@@ -62,6 +64,8 @@ const ICON_MAP: Record<string, LucideIcon> = {
   content_cut: Scissors,
   water_drop: Droplet,
   home: Home,
+  support_agent: Headset,
+  notifications: Bell,
 };
 
 interface IconProps {

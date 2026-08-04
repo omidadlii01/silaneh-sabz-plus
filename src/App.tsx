@@ -10,6 +10,7 @@ import { CartView } from './views/CartView';
 import { CheckoutView } from './views/CheckoutView';
 import { OrderSuccessView } from './views/OrderSuccessView';
 import { MyOrdersView } from './views/MyOrdersView';
+import { VisitorView } from './views/VisitorView';
 import { AccountView } from './views/AccountView';
 import { AdminView } from './views/AdminView';
 
@@ -36,6 +37,7 @@ const MainContent: React.FC = () => {
             {viewScreen === 'checkout' && <CheckoutView />}
             {viewScreen === 'order-success' && <OrderSuccessView />}
             {viewScreen === 'my-orders' && <MyOrdersView />}
+            {viewScreen === 'visitor' && <VisitorView />}
             {viewScreen === 'account' && <AccountView />}
             {viewScreen === 'admin' && <AdminView />}
           </>

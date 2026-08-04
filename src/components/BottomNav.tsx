@@ -13,6 +13,7 @@ export const BottomNav: React.FC = () => {
     { id: 'home', label: 'خانه', icon: 'home' },
     { id: 'products', label: 'محصولات', icon: 'inventory_2' },
     { id: 'orders', label: 'سفارشات', icon: 'receipt_long' },
+    { id: 'visitor', label: 'ارتباط با ویزیتور', icon: 'support_agent' },
     { id: 'account', label: 'حساب کاربری', icon: 'account_circle' },
   ];
 
@@ -20,6 +21,7 @@ export const BottomNav: React.FC = () => {
     if (tabId === 'home') navigateTo('home');
     else if (tabId === 'products') navigateTo('products');
     else if (tabId === 'orders') navigateTo('my-orders');
+    else if (tabId === 'visitor') navigateTo('visitor');
     else if (tabId === 'account') navigateTo('account');
   };
 

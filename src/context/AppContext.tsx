@@ -190,6 +190,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (screen === 'home') setActiveTab('home');
     else if (screen === 'products') setActiveTab('products');
     else if (screen === 'my-orders') setActiveTab('orders');
+    else if (screen === 'visitor') setActiveTab('visitor');
     else if (screen === 'account') setActiveTab('account');
   };
 
