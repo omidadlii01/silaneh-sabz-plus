@@ -298,10 +298,10 @@ const HomeProductSection: React.FC<{
   if (!products || products.length === 0) return null;
   return (
     <section>
-      <div className="flex justify-between items-center mb-3.5">
-        <div className="flex items-center gap-1.5 flex-row-reverse">
-          <h2 className="font-['Vazirmatn'] text-[17px] font-extrabold text-[#022c22]">{title}</h2>
+      <div className="flex justify-between items-center mb-3">
+        <div className="flex items-center gap-1.5 text-right">
           <Icon name={iconName} size={20} className="text-[#006c4a]" />
+          <h2 className="font-['Vazirmatn'] text-[16px] font-extrabold text-[#022c22]">{title}</h2>
         </div>
         <button
           onClick={onViewAll}
@@ -328,11 +328,11 @@ const HomeBrandsGrid: React.FC<{ brands: any[] }> = ({ brands }) => {
 
   return (
     <section>
-      <div className="flex items-center gap-1.5 flex-row-reverse mb-3">
+      <div className="flex items-center gap-1.5 mb-3 text-right">
+        <Icon name="military_tech" size={20} className="text-[#006c4a]" />
         <h2 className="font-['Vazirmatn'] text-[16px] font-extrabold text-[#022c22]">
           برندهای سیلانه سبز
         </h2>
-        <Icon name="military_tech" size={20} className="text-[#006c4a]" />
       </div>
 
       <div className="grid grid-cols-4 gap-2.5">
@@ -354,9 +354,9 @@ const HomeBrandTile: React.FC<{ brand: any }> = ({ brand }) => {
         updateFilter('brand', brand.name);
         navigateTo('products');
       }}
-      className="bg-white border border-[#bec9c2]/30 hover:border-[#006c4a]/40 hover:bg-[#f6fafe] rounded-2xl p-2 flex flex-col items-center text-center cursor-pointer active:scale-95 transition-all shadow-xs"
+      className="bg-white border border-[#bec9c2]/30 hover:border-[#006c4a]/40 hover:bg-[#f6fafe] rounded-2xl p-2 flex flex-col items-center justify-between text-center cursor-pointer active:scale-95 transition-all shadow-xs h-[104px] w-full"
     >
-      <div className="aspect-square w-full p-1.5 flex items-center justify-center">
+      <div className="w-11 h-11 flex items-center justify-center shrink-0 mt-0.5">
         {brand.imageUrl && !hasError ? (
           <img
             src={resolveAssetUrl(brand.imageUrl)}
@@ -368,16 +368,20 @@ const HomeBrandTile: React.FC<{ brand: any }> = ({ brand }) => {
           />
         ) : (
           <div
-            className={`w-full h-full rounded-lg bg-gradient-to-tr ${brand.logoColor || 'from-emerald-600 to-teal-700'} text-white font-black text-[11px] flex items-center justify-center`}
+            className={`w-10 h-10 rounded-xl bg-gradient-to-tr ${brand.logoColor || 'from-emerald-600 to-teal-700'} text-white font-black text-[12px] flex items-center justify-center shadow-xs`}
           >
             {brand.name.slice(0, 2)}
           </div>
         )}
       </div>
-      <span className="font-bold text-[11px] text-[#171c1f] truncate w-full">{brand.name}</span>
-      {brand.englishName && (
-        <span className="text-[9px] text-[#6f7973] truncate w-full">{brand.englishName}</span>
-      )}
+      <div className="flex flex-col items-center w-full min-h-[32px] justify-center">
+        <span className="font-bold text-[11px] text-[#171c1f] truncate w-full leading-tight">{brand.name}</span>
+        {brand.englishName ? (
+          <span className="text-[9px] text-[#6f7973] truncate w-full leading-tight mt-0.5">{brand.englishName}</span>
+        ) : (
+          <span className="text-[9px] text-[#6f7973] truncate w-full leading-tight mt-0.5">سیلانه سبز</span>
+        )}
+      </div>
     </div>
   );
 };
@@ -456,14 +460,18 @@ const HomeGiftBox: React.FC<{ product?: Product; onClick: () => void }> = ({ pro
   return (
     <div
       onClick={onClick}
-      className="bg-[#f6fafe] border border-[#bec9c2]/30 rounded-2xl p-4 flex flex-col items-center justify-center gap-2 h-[168px] cursor-pointer active:scale-[0.98] transition-transform text-center"
+      className="bg-white border border-[#bec9c2]/35 rounded-2xl p-4 flex flex-col items-center justify-center gap-2.5 h-[168px] cursor-pointer active:scale-[0.98] transition-transform text-center shadow-xs hover:border-[#006c4a]/40 hover:bg-[#f6fafe]"
     >
-      <Icon name="card_giftcard" size={56} className="text-[#006c4a]" />
-      <div className="text-[#171c1f] font-extrabold text-[13px] leading-tight">
-        {product ? 'پکیج‌های پیشنهادی' : 'پکیج‌ها'}
+      <div className="w-14 h-14 rounded-2xl bg-[#006c4a]/10 flex items-center justify-center text-[#006c4a]">
+        <Icon name="card_giftcard" size={32} />
       </div>
-      <div className="text-[#6f7973] text-[10.5px] font-semibold leading-tight line-clamp-1">
-        {product ? product.name : 'به‌زودی پکیج‌های ویژه'}
+      <div className="flex flex-col items-center">
+        <div className="text-[#171c1f] font-extrabold text-[14px] leading-tight">
+          {product ? 'پکیج‌های پیشنهادی' : 'پکیج‌ها'}
+        </div>
+        <div className="text-[#6f7973] text-[11px] font-semibold leading-tight mt-1 line-clamp-1">
+          {product ? product.name : 'به‌زودی پکیج‌های ویژه'}
+        </div>
       </div>
     </div>
   );
@@ -734,7 +742,7 @@ export const HomeView: React.FC = () => {
   }));
 
   return (
-    <div className="pb-28 pt-4 space-y-7">
+    <div className="pb-28 pt-2 space-y-4">
       <div className="px-4">
         <AppBanner />
       </div>
