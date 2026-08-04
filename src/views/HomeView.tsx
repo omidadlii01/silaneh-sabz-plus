@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { AppBanner } from '../components/AppBanner';
 import { StatusBadge } from '../components/StatusBadge';
+import { Icon } from '../components/Icon';
 import { Product } from '../types';
 import { formatCurrency, toPersianDigits, resolveAssetUrl } from '../utils';
 
@@ -51,14 +52,14 @@ const HomeSearchBar: React.FC<{ products: Product[] }> = ({ products }) => {
           className="w-full h-[52px] bg-white border border-[#bec9c2]/40 rounded-xl px-4 pr-12 pl-10 focus:ring-2 focus:ring-[#006c4a]/20 focus:border-[#006c4a] transition-all text-right shadow-xs text-[14px] text-[#171c1f]"
         />
         <div className="absolute right-4 flex items-center pointer-events-none text-[#006c4a]">
-          <span className="material-symbols-outlined text-[22px]">search</span>
+          <Icon name="search" size={22} />
         </div>
         {query && (
           <button
             onClick={() => setQuery('')}
             className="absolute left-3 p-1 rounded-full text-[#6f7973] hover:text-[#171c1f]"
           >
-            <span className="material-symbols-outlined text-[18px]">close</span>
+            <Icon name="close" size={18} />
           </button>
         )}
       </div>
@@ -80,7 +81,7 @@ const HomeSearchBar: React.FC<{ products: Product[] }> = ({ products }) => {
                   برند: {item.brand} | کارتنی ({toPersianDigits(item.cartonQuantity)} عددی)
                 </span>
               </div>
-              <span className="material-symbols-outlined text-[#006c4a] text-[18px]">chevron_left</span>
+              <Icon name="chevron_left" size={18} className="text-[#006c4a]" />
             </button>
           ))}
         </div>
@@ -115,7 +116,7 @@ const HomeCategoryGrid: React.FC = () => {
             className="flex flex-col items-center gap-1.5 cursor-pointer group active:scale-95 transition-all duration-200"
           >
             <div className="aspect-square w-full rounded-2xl bg-[#eaeef2]/40 backdrop-blur-md flex items-center justify-center p-2.5 border border-[#006c4a]/20 group-hover:border-[#006c4a]/50 group-hover:bg-white transition-all shadow-xs">
-              <span className="material-symbols-outlined text-[#006c4a] text-[30px]">{cat.icon}</span>
+              <Icon name={cat.icon} size={30} className="text-[#006c4a]" />
             </div>
             <span className="text-[12px] font-semibold text-center mt-1 leading-tight text-[#171c1f]">
               {cat.name}
@@ -152,7 +153,7 @@ const HomeProductCard: React.FC<{ product: Product; className?: string }> = ({
           className="absolute top-2.5 left-2.5 z-10 w-8 h-8 rounded-xl bg-white border border-[#006c4a]/30 text-[#006c4a] hover:bg-[#006c4a] hover:text-white flex items-center justify-center transition-all shadow-xs active:scale-90 disabled:opacity-40"
           title="افزودن به سبد خرید"
         >
-          <span className="material-symbols-outlined text-[18px]">add</span>
+          <Icon name="add" size={18} />
         </button>
       )}
 
@@ -171,7 +172,7 @@ const HomeProductCard: React.FC<{ product: Product; className?: string }> = ({
               loading="lazy"
             />
           ) : (
-            <span className="material-symbols-outlined text-[#cbd5e1] text-[36px]">inventory_2</span>
+            <Icon name="inventory_2" size={36} className="text-[#cbd5e1]" />
           )}
         </div>
 
@@ -182,7 +183,7 @@ const HomeProductCard: React.FC<{ product: Product; className?: string }> = ({
         </h3>
 
         <div className="flex items-center gap-1 text-[#6f7973] text-[10px] mt-1.5">
-          <span className="material-symbols-outlined text-[14px]">inventory_2</span>
+          <Icon name="inventory_2" size={14} />
           <span>{toPersianDigits(product.cartonQuantity)} عدد در کارتن</span>
         </div>
       </div>
@@ -259,14 +260,14 @@ const HomeProductSection: React.FC<{
       <div className="flex justify-between items-center mb-3.5">
         <div className="flex items-center gap-1.5 flex-row-reverse">
           <h2 className="font-['Vazirmatn'] text-[17px] font-extrabold text-[#022c22]">{title}</h2>
-          <span className="material-symbols-outlined text-[#006c4a] text-[20px]">{iconName}</span>
+          <Icon name={iconName} size={20} className="text-[#006c4a]" />
         </div>
         <button
           onClick={onViewAll}
           className="text-[#006c4a] text-[12px] font-bold flex items-center gap-0.5 hover:underline"
         >
           مشاهده همه
-          <span className="material-symbols-outlined text-[16px]">chevron_left</span>
+          <Icon name="chevron_left" size={16} />
         </button>
       </div>
 
@@ -292,7 +293,7 @@ const HomeBrandsGrid: React.FC<{ brands: any[] }> = ({ brands }) => {
           <h2 className="font-['Vazirmatn'] text-[16px] font-extrabold text-[#022c22]">
             برندهای سیلانه سبز
           </h2>
-          <span className="material-symbols-outlined text-[#006c4a] text-[20px]">military_tech</span>
+          <Icon name="military_tech" size={20} className="text-[#006c4a]" />
         </div>
         <button
           onClick={() => {
@@ -302,7 +303,7 @@ const HomeBrandsGrid: React.FC<{ brands: any[] }> = ({ brands }) => {
           className="text-[#006c4a] text-[12px] font-bold flex items-center gap-0.5 hover:underline"
         >
           مشاهده همه
-          <span className="material-symbols-outlined text-[16px]">chevron_left</span>
+          <Icon name="chevron_left" size={16} />
         </button>
       </div>
 
@@ -403,7 +404,7 @@ const HomeWeeklyOffer: React.FC<{ slides: PromoSlide[] }> = ({ slides }) => {
               className="w-full h-full object-contain"
             />
           ) : (
-            <span className="material-symbols-outlined text-[#006c4a] text-[40px]">{slide.fallbackIcon}</span>
+            <Icon name={slide.fallbackIcon} size={40} className="text-[#006c4a]" />
           )}
         </div>
 
@@ -467,7 +468,7 @@ const HomeFeaturedOffer: React.FC<{ product: Product }> = ({ product }) => {
                 className="w-full h-full object-contain"
               />
             ) : (
-              <span className="material-symbols-outlined text-[#cbd5e1] text-[40px]">card_giftcard</span>
+              <Icon name="card_giftcard" size={40} className="text-[#cbd5e1]" />
             )}
           </div>
 
@@ -492,7 +493,7 @@ const HomeFeaturedOffer: React.FC<{ product: Product }> = ({ product }) => {
           </div>
 
           <div className="flex items-center gap-1 text-[#b45309] text-[10px] font-bold">
-            <span className="material-symbols-outlined text-[14px]">local_offer</span>
+            <Icon name="local_offer" size={14} />
             <span>پیشنهاد ویژه همکاری — موجودی محدود</span>
           </div>
 
@@ -516,7 +517,7 @@ const HomeFeaturedOffer: React.FC<{ product: Product }> = ({ product }) => {
         {/* Side promo column */}
         <div className="flex-1 flex flex-col items-center justify-center text-center gap-2 py-4">
           <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center">
-            <span className="material-symbols-outlined text-white text-[26px]">redeem</span>
+            <Icon name="redeem" size={26} className="text-white" />
           </div>
           <div className="text-white font-bold text-[13px]">پیشنهادهای ویژه</div>
           <button
@@ -524,7 +525,7 @@ const HomeFeaturedOffer: React.FC<{ product: Product }> = ({ product }) => {
             className="text-white/80 hover:text-white font-semibold flex items-center gap-0.5 text-[10px] hover:underline"
           >
             مشاهده همه
-            <span className="material-symbols-outlined text-[12px]">chevron_left</span>
+            <Icon name="chevron_left" size={12} />
           </button>
         </div>
       </div>
@@ -591,7 +592,7 @@ export const HomeView: React.FC = () => {
 
       {catalogError && (
         <div className="mx-4 bg-rose-50 border border-rose-200 text-rose-800 rounded-2xl p-3.5 flex items-start gap-2.5">
-          <span className="material-symbols-outlined text-rose-600 text-[20px] shrink-0 mt-0.5">warning</span>
+          <Icon name="warning" size={20} className="text-rose-600 shrink-0 mt-0.5" />
           <div className="flex-1">
             <p className="text-xs font-extrabold">اتصال به سرور محصولات برقرار نشد</p>
             <p className="text-[11px] text-rose-700 mt-0.5">
@@ -611,7 +612,7 @@ export const HomeView: React.FC = () => {
       {mostRecentOrder && (
         <div className="mx-4 bg-[#ecfdf5] rounded-xl px-3 py-2 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-[#006c4a] text-[16px]">history</span>
+            <Icon name="history" size={16} className="text-[#006c4a]" />
             <span className="text-[11px] font-bold text-[#022c22]">تکرار سفارش قبلی</span>
           </div>
           <button
@@ -619,7 +620,7 @@ export const HomeView: React.FC = () => {
             className="bg-[#006c4a] hover:bg-[#004532] text-white text-[10.5px] font-extrabold px-2.5 py-1 rounded-lg active:scale-95 transition-all flex items-center gap-1"
           >
             <span>ثبت مجدد ({toPersianDigits(mostRecentOrder.items.length)} کالا)</span>
-            <span className="material-symbols-outlined text-[13px]">arrow_back</span>
+            <Icon name="arrow_back" size={13} />
           </button>
         </div>
       )}
@@ -652,7 +653,7 @@ export const HomeView: React.FC = () => {
       )}
 
       <div className="mx-4 flex items-center gap-2 bg-amber-50 rounded-xl px-3 py-2">
-        <span className="material-symbols-outlined text-amber-600 text-[18px] shrink-0">sell</span>
+        <Icon name="sell" size={18} className="text-amber-600 shrink-0" />
         <p className="text-[10.5px] text-amber-800 font-semibold leading-relaxed">
           سفارش‌های عمده بالای {formatCurrency(5000000)} شامل ۵٪ تخفیف خودکار همکاری می‌شوند.
         </p>
@@ -682,7 +683,7 @@ export const HomeView: React.FC = () => {
       <div className="mx-4 bg-white rounded-2xl border border-[#e2e8f0] p-3.5 shadow-xs">
         <div className="flex items-center justify-between mb-3 border-b border-[#f1f5f9] pb-2">
           <div className="flex items-center gap-1.5">
-            <span className="material-symbols-outlined text-[#022c22] text-[18px]">schedule</span>
+            <Icon name="schedule" size={18} className="text-[#022c22]" />
             <h3 className="text-xs font-extrabold text-[#171c1f]">آخرین سفارشات ثبت‌شده</h3>
           </div>
           <button

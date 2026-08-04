@@ -1,6 +1,7 @@
 import React from 'react';
 import { useApp } from '../context/AppContext';
 import { ActiveTab } from '../types';
+import { Icon } from './Icon';
 
 export const BottomNav: React.FC = () => {
   const { activeTab, viewScreen, navigateTo } = useApp();
@@ -39,14 +40,12 @@ export const BottomNav: React.FC = () => {
                   isActive ? 'bg-[#82f5c1]/30' : ''
                 }`}
               >
-                <span
-                  className={`material-symbols-outlined text-[22px] ${
-                    isActive ? 'text-[#006c4a]' : 'text-[#6f7973]'
-                  }`}
-                  style={isActive ? { fontVariationSettings: "'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24" } : undefined}
-                >
-                  {item.icon}
-                </span>
+                <Icon
+                  name={item.icon}
+                  size={22}
+                  className={isActive ? 'text-[#006c4a]' : 'text-[#6f7973]'}
+                  style={isActive ? { fill: 'currentColor', fillOpacity: 0.15 } : undefined}
+                />
               </div>
               <span
                 className={`text-[10.5px] mt-0.5 leading-none ${

@@ -2,6 +2,7 @@ import React from 'react';
 import { useApp } from '../context/AppContext';
 import { toPersianDigits } from '../utils';
 import { SeylanehLogo } from './SeylanehLogo';
+import { Icon } from './Icon';
 
 export const Header: React.FC = () => {
   const { viewScreen, navigateTo, cartTotalCount, isAdmin } = useApp();
@@ -21,7 +22,7 @@ export const Header: React.FC = () => {
             }}
             className="flex items-center gap-1 text-[#022c22] font-bold text-sm p-1.5 -mr-1.5 rounded-lg hover:bg-[#f0f4f8] active:scale-95 transition-all"
           >
-            <span className="material-symbols-outlined text-[22px]">arrow_forward</span>
+            <Icon name="arrow_forward" size={22} />
             <span>بازگشت</span>
           </button>
         ) : (
@@ -49,7 +50,7 @@ export const Header: React.FC = () => {
             onClick={() => navigateTo('admin')}
             className="flex items-center gap-1 bg-amber-50 text-amber-700 border border-amber-200 text-[11px] px-2.5 py-1 rounded-full font-bold ml-1"
           >
-            <span className="material-symbols-outlined text-[14px]">verified_user</span>
+            <Icon name="verified_user" size={14} />
             <span>مدیریت</span>
           </button>
         )}
@@ -60,7 +61,7 @@ export const Header: React.FC = () => {
           title="سبد خرید"
           aria-label="سبد خرید"
         >
-          <span className="material-symbols-outlined text-[24px]">shopping_cart</span>
+          <Icon name="shopping_cart" size={24} />
           {cartTotalCount > 0 && (
             <span className="absolute -top-1 -right-1 bg-[#006c4a] text-white text-[10px] font-extrabold min-w-[20px] h-5 px-0.5 rounded-full flex items-center justify-center border-2 border-white shadow-xs">
               {toPersianDigits(cartTotalCount)}
@@ -74,7 +75,7 @@ export const Header: React.FC = () => {
           title="سفارشات"
           aria-label="سفارشات"
         >
-          <span className="material-symbols-outlined text-[24px]">receipt_long</span>
+          <Icon name="receipt_long" size={24} />
         </button>
 
         <button
@@ -83,7 +84,7 @@ export const Header: React.FC = () => {
           title="حساب کاربری"
           aria-label="حساب کاربری"
         >
-          <span className="material-symbols-outlined text-[24px]">account_circle</span>
+          <Icon name="account_circle" size={24} />
         </button>
       </div>
     </header>
