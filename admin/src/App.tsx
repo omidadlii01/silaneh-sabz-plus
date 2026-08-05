@@ -1,128 +1,298 @@
-import React, { useEffect, useState } from 'react';
-import {
-  LayoutDashboard,
-  ShoppingCart,
-  Package,
-  Tags,
-  Users,
-  UserCheck,
-  Settings as SettingsIcon,
-  LogOut,
-  Menu,
-  X,
-} from 'lucide-react';
-import Login from './Login';
-import { getToken, clearToken } from './api';
-import Dashboard from './pages/Dashboard';
-import Orders from './pages/Orders';
-import Products from './pages/Products';
-import Brands from './pages/Brands';
-import Customers from './pages/Customers';
-import Marketers from './pages/Marketers';
-import Settings from './pages/Settings';
+import React, { useState } from 'react';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import { DataProvider, useData } from './context/DataContext';
 
-type Tab = 'dashboard' | 'orders' | 'products' | 'brands' | 'customers' | 'marketers' | 'settings';
+// Layout
+import { Header } from './components/common/Header';
+import { Sidebar } from './components/common/Sidebar';
+import { RoleGuard } from './components/common/RoleGuard';
 
-const NAV: { id: Tab; label: string; icon: any }[] = [
-  { id: 'dashboard', label: 'داشبورد', icon: LayoutDashboard },
-  { id: 'orders', label: 'سفارش‌ها', icon: ShoppingCart },
-  { id: 'products', label: 'محصولات', icon: Package },
-  { id: 'brands', label: 'برندها', icon: Tags },
-  { id: 'customers', label: 'مشتری‌ها', icon: Users },
-  { id: 'marketers', label: 'بازاریاب‌ها', icon: UserCheck },
-  { id: 'settings', label: 'تنظیمات اپ', icon: SettingsIcon },
-];
+// Pages
+import { DashboardPage } from './pages/DashboardPage';
+import { OrdersPage } from './pages/OrdersPage';
+import { CustomersPage } from './pages/CustomersPage';
+import { MarketersPage } from './pages/MarketersPage';
+import { MarketerDetailPage } from './pages/MarketerDetailPage';
+import { ProductsPage } from './pages/ProductsPage';
+import { BrandsPage } from './pages/BrandsPage';
+import { OffersPage } from './pages/OffersPage';
+import { ReportsPage } from './pages/ReportsPage';
+import { AdminUsersPage } from './pages/AdminUsersPage';
+import { SettingsPage } from './pages/SettingsPage';
+import { AuthPage } from './pages/AuthPage';
 
-export default function App() {
-  const [authed, setAuthed] = useState(!!getToken());
-  const [tab, setTab] = useState<Tab>('dashboard');
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+// Modals
+import { OrderDetailModal } from './components/modals/OrderDetailModal';
+import { AddOrderModal } from './components/modals/AddOrderModal';
+import { CustomerModal } from './components/modals/CustomerModal';
+import { MarketerModal } from './components/modals/MarketerModal';
+import { ApproveAdminModal } from './components/modals/ApproveAdminModal';
+import { ProductModal } from './components/modals/ProductModal';
+import { BrandModal } from './components/modals/BrandModal';
+import { OfferModal } from './components/modals/OfferModal';
 
-  useEffect(() => {
-    setSidebarOpen(false);
-  }, [tab]);
+// Types
+import { Order, Customer, Marketer, AdminUser, Product } from './types';
+import { Menu } from 'lucide-react';
 
-  if (!authed) {
-    return <Login onSuccess={() => setAuthed(true)} />;
-  }
+function AppContent() {
+  const { currentUser, loading: authLoading } = useAuth();
+  const { orders, updateOrderStatus } = useData();
 
-  const handleLogout = () => {
-    clearToken();
-    setAuthed(false);
+  const [currentPath, setCurrentPath] = useState<string>('/dashboard');
+  const [isOpenMobileSidebar, setIsOpenMobileSidebar] = useState(false);
+
+  // Modal States
+  const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
+  const [showAddOrderModal, setShowAddOrderModal] = useState(false);
+  const [editingCustomer, setEditingCustomer] = useState<{ show: boolean; customer?: Customer | null }>({ show: false });
+  const [editingMarketer, setEditingMarketer] = useState<{ show: boolean; marketer?: Marketer | null }>({ show: false });
+  const [approvingAdminUser, setApprovingAdminUser] = useState<AdminUser | null>(null);
+  const [editingProduct, setEditingProduct] = useState<{ show: boolean; product?: Product | null }>({ show: false });
+  const [showBrandModal, setShowBrandModal] = useState(false);
+  const [showOfferModal, setShowOfferModal] = useState(false);
+
+  const selectedOrder = orders.find(o => o.id === selectedOrderId) || null;
+
+  // Render main page according to path
+  const renderMainContent = () => {
+    if (authLoading) {
+      return (
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="w-8 h-8 border-2 border-[#006c4a] border-t-transparent rounded-full animate-spin" />
+        </div>
+      );
+    }
+
+    if (!currentUser) {
+      return <AuthPage onNavigate={setCurrentPath} />;
+    }
+
+    if (currentPath === '/login' || currentPath === '/signup') {
+      return <AuthPage onNavigate={setCurrentPath} />;
+    }
+
+    if (currentPath.startsWith('/marketers/')) {
+      const idStr = currentPath.split('/')[2];
+      const mId = Number(idStr) || 101;
+      return (
+        <RoleGuard path="/marketers" onNavigate={setCurrentPath}>
+          <MarketerDetailPage
+            marketerId={mId}
+            onNavigate={setCurrentPath}
+            onOpenMarketerModal={(m) => setEditingMarketer({ show: true, marketer: m })}
+            onSelectOrder={setSelectedOrderId}
+          />
+        </RoleGuard>
+      );
+    }
+
+    switch (currentPath) {
+      case '/':
+      case '/dashboard':
+        return (
+          <RoleGuard path="/dashboard" onNavigate={setCurrentPath}>
+            <DashboardPage
+              onNavigate={setCurrentPath}
+              onOpenOrderModal={() => setShowAddOrderModal(true)}
+              onSelectOrder={setSelectedOrderId}
+            />
+          </RoleGuard>
+        );
+
+      case '/orders':
+        return (
+          <RoleGuard path="/orders" onNavigate={setCurrentPath}>
+            <OrdersPage
+              onSelectOrder={setSelectedOrderId}
+              onOpenAddModal={() => setShowAddOrderModal(true)}
+              onNavigate={setCurrentPath}
+            />
+          </RoleGuard>
+        );
+
+      case '/customers':
+        return (
+          <RoleGuard path="/customers" onNavigate={setCurrentPath}>
+            <CustomersPage
+              onOpenCustomerModal={(cust) => setEditingCustomer({ show: true, customer: cust })}
+              onNavigate={setCurrentPath}
+            />
+          </RoleGuard>
+        );
+
+      case '/marketers':
+        return (
+          <RoleGuard path="/marketers" onNavigate={setCurrentPath}>
+            <MarketersPage
+              onOpenMarketerModal={(m) => setEditingMarketer({ show: true, marketer: m })}
+              onNavigate={setCurrentPath}
+            />
+          </RoleGuard>
+        );
+
+      case '/products':
+        return (
+          <RoleGuard path="/products" onNavigate={setCurrentPath}>
+            <ProductsPage
+              onOpenProductModal={(p) => setEditingProduct({ show: true, product: p })}
+            />
+          </RoleGuard>
+        );
+
+      case '/brands':
+        return (
+          <RoleGuard path="/brands" onNavigate={setCurrentPath}>
+            <BrandsPage
+              onOpenBrandModal={() => setShowBrandModal(true)}
+            />
+          </RoleGuard>
+        );
+
+      case '/offers':
+        return (
+          <RoleGuard path="/offers" onNavigate={setCurrentPath}>
+            <OffersPage
+              onOpenOfferModal={() => setShowOfferModal(true)}
+            />
+          </RoleGuard>
+        );
+
+      case '/reports':
+        return (
+          <RoleGuard path="/reports" onNavigate={setCurrentPath}>
+            <ReportsPage />
+          </RoleGuard>
+        );
+
+      case '/admin-users':
+        return (
+          <RoleGuard path="/admin-users" onNavigate={setCurrentPath}>
+            <AdminUsersPage
+              onOpenApproveModal={(user) => setApprovingAdminUser(user)}
+            />
+          </RoleGuard>
+        );
+
+      case '/settings':
+        return (
+          <RoleGuard path="/settings" onNavigate={setCurrentPath}>
+            <SettingsPage />
+          </RoleGuard>
+        );
+
+      default:
+        return (
+          <RoleGuard path="/dashboard" onNavigate={setCurrentPath}>
+            <DashboardPage
+              onNavigate={setCurrentPath}
+              onOpenOrderModal={() => setShowAddOrderModal(true)}
+              onSelectOrder={setSelectedOrderId}
+            />
+          </RoleGuard>
+        );
+    }
   };
 
   return (
-    <div className="min-h-screen flex bg-gray-50" dir="rtl">
-      {/* Sidebar */}
-      <aside
-        className={`fixed inset-y-0 right-0 z-30 w-64 bg-emerald-900 text-white flex flex-col transition-transform duration-200 lg:static lg:translate-x-0 ${
-          sidebarOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'
-        }`}
-      >
-        <div className="p-5 border-b border-emerald-800 flex items-center justify-between">
-          <div>
-            <h1 className="font-bold text-base">سیلانه سبز</h1>
-            <p className="text-emerald-300 text-xs mt-0.5">پنل مدیریت</p>
-          </div>
-          <button className="lg:hidden text-emerald-200" onClick={() => setSidebarOpen(false)}>
-            <X size={20} />
-          </button>
-        </div>
+    <div className="min-h-screen bg-[#f6fafe] text-[#171c1f] font-['Vazirmatn',sans-serif]">
+      {/* Top Header */}
+      <Header onNavigate={setCurrentPath} />
 
-        <nav className="flex-1 p-3 space-y-1">
-          {NAV.map((item) => {
-            const Icon = item.icon;
-            const active = tab === item.id;
-            return (
-              <button
-                key={item.id}
-                onClick={() => setTab(item.id)}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition ${
-                  active ? 'bg-emerald-700 text-white' : 'text-emerald-200 hover:bg-emerald-800'
-                }`}
-              >
-                <Icon size={18} />
-                {item.label}
-              </button>
-            );
-          })}
-        </nav>
-
-        <div className="p-3 border-t border-emerald-800">
+      {/* Mobile Menu Toggle Button */}
+      {currentUser && (
+        <div className="md:hidden bg-white border-b border-slate-200 px-4 py-2 flex items-center justify-between sticky top-16 z-20 shadow-xs">
           <button
-            onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-emerald-200 hover:bg-emerald-800 transition"
+            onClick={() => setIsOpenMobileSidebar(!isOpenMobileSidebar)}
+            className="flex items-center gap-2 text-xs font-bold text-[#006c4a] bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-200"
           >
-            <LogOut size={18} />
-            خروج
+            <Menu className="w-4 h-4" />
+            <span>منوی بخش‌ها</span>
           </button>
+          <span className="text-xs font-bold text-slate-700">سیلانه سبز پلاس</span>
         </div>
-      </aside>
-
-      {sidebarOpen && (
-        <div className="fixed inset-0 bg-black/40 z-20 lg:hidden" onClick={() => setSidebarOpen(false)} />
       )}
 
-      {/* Main content */}
-      <div className="flex-1 flex flex-col min-w-0">
-        <header className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between lg:hidden">
-          <button onClick={() => setSidebarOpen(true)} className="text-emerald-900">
-            <Menu size={22} />
-          </button>
-          <h1 className="font-bold text-emerald-900">{NAV.find((n) => n.id === tab)?.label}</h1>
-          <div className="w-6" />
-        </header>
+      {/* Main Container Layout */}
+      <div className="max-w-7xl mx-auto flex items-start">
+        {currentUser && (
+          <Sidebar
+            currentPath={currentPath}
+            onNavigate={setCurrentPath}
+            isOpenMobile={isOpenMobileSidebar}
+            setIsOpenMobile={setIsOpenMobileSidebar}
+          />
+        )}
 
-        <main className="flex-1 p-4 lg:p-8 overflow-y-auto">
-          {tab === 'dashboard' && <Dashboard />}
-          {tab === 'orders' && <Orders />}
-          {tab === 'products' && <Products />}
-          {tab === 'brands' && <Brands />}
-          {tab === 'customers' && <Customers />}
-          {tab === 'marketers' && <Marketers />}
-          {tab === 'settings' && <Settings />}
+        <main className="flex-1 p-4 md:p-6 min-w-0 overflow-hidden">
+          {renderMainContent()}
         </main>
       </div>
+
+      {/* Global Modals */}
+      {selectedOrderId !== null && (
+        <OrderDetailModal
+          order={selectedOrder}
+          onClose={() => setSelectedOrderId(null)}
+          onUpdateStatus={updateOrderStatus}
+        />
+      )}
+
+      {showAddOrderModal && (
+        <AddOrderModal
+          onClose={() => setShowAddOrderModal(false)}
+        />
+      )}
+
+      {editingCustomer.show && (
+        <CustomerModal
+          customer={editingCustomer.customer}
+          onClose={() => setEditingCustomer({ show: false })}
+        />
+      )}
+
+      {editingMarketer.show && (
+        <MarketerModal
+          marketer={editingMarketer.marketer}
+          onClose={() => setEditingMarketer({ show: false })}
+        />
+      )}
+
+      {approvingAdminUser && (
+        <ApproveAdminModal
+          adminUser={approvingAdminUser}
+          onClose={() => setApprovingAdminUser(null)}
+        />
+      )}
+
+      {editingProduct.show && (
+        <ProductModal
+          product={editingProduct.product}
+          onClose={() => setEditingProduct({ show: false })}
+        />
+      )}
+
+      {showBrandModal && (
+        <BrandModal
+          onClose={() => setShowBrandModal(false)}
+        />
+      )}
+
+      {showOfferModal && (
+        <OfferModal
+          onClose={() => setShowOfferModal(false)}
+        />
+      )}
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <DataProvider>
+        <AppContent />
+      </DataProvider>
+    </AuthProvider>
   );
 }

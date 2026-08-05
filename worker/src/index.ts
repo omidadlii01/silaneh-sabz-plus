@@ -6,7 +6,7 @@ export interface Env {
 function cors(resp: Response): Response {
   resp.headers.set('Access-Control-Allow-Origin', '*');
   resp.headers.set('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
-  resp.headers.set('Access-Control-Allow-Headers', 'Content-Type, X-Admin-Token');
+  resp.headers.set('Access-Control-Allow-Headers', 'Content-Type, X-Admin-Token, X-Admin-Session');
   return resp;
 }
 
@@ -34,6 +34,45 @@ function genId(prefix: string): string {
 function isAuthorized(request: Request, env: Env): boolean {
   const token = request.headers.get('X-Admin-Token');
   return !!env.ADMIN_TOKEN && token === env.ADMIN_TOKEN;
+}
+
+function genSessionToken(): string {
+  const bytes = new Uint8Array(24);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function getSessionAdminUser(request: Request, env: Env): Promise<any | null> {
+  const session = request.headers.get('X-Admin-Session');
+  if (!session) return null;
+  const user = await env.DB.prepare(
+    `SELECT * FROM admin_users WHERE session_token = ? AND status = 'active'`,
+  )
+    .bind(session)
+    .first<any>();
+  return user || null;
+}
+
+// True if the request carries either the legacy shared X-Admin-Token
+// (always full access, used by the account owner) or a valid active
+// admin_users session (any approved role — endpoint-level role checks,
+// where they matter, are done separately by the caller).
+async function isAdminAuthorized(request: Request, env: Env): Promise<boolean> {
+  if (isAuthorized(request, env)) return true;
+  const user = await getSessionAdminUser(request, env);
+  return !!user;
+}
+
+function adminUserToJson(u: any) {
+  return {
+    id: u.id,
+    first_name: u.first_name,
+    last_name: u.last_name,
+    phone: u.phone,
+    role: u.role,
+    status: u.status,
+    created_at: u.created_at,
+  };
 }
 
 function customerToJson(c: any) {
@@ -612,7 +651,55 @@ export default {
         return json({ ok: true });
       }
 
-      // ===================== ADMIN ONLY (requires X-Admin-Token header) =====================
+      // --- MANAGER APP: PUBLIC admin-user signup/login (no auth required) ---
+      if (path === '/api/admin/user-signup' && method === 'POST') {
+        const body = await request.json<any>();
+        const { first_name, last_name, phone, password } = body;
+        if (!first_name || !last_name || !phone || !password) {
+          return json({ error: 'اطلاعات ناقص است.' }, 400);
+        }
+        const existing = await env.DB.prepare('SELECT id FROM admin_users WHERE phone = ?')
+          .bind(phone)
+          .first();
+        if (existing) {
+          return json({ error: 'این شماره موبایل قبلاً ثبت شده است.' }, 409);
+        }
+        const result = await env.DB.prepare(
+          `INSERT INTO admin_users (first_name, last_name, phone, password, role, status)
+           VALUES (?, ?, ?, ?, NULL, 'pending')`,
+        )
+          .bind(first_name, last_name, phone, password)
+          .run();
+        const newUser = await env.DB.prepare('SELECT * FROM admin_users WHERE id = ?')
+          .bind(result.meta.last_row_id)
+          .first<any>();
+        return json(
+          {
+            message: 'ثبت‌نام شما انجام شد. تا زمان تایید و تخصیص نقش توسط مدیرکل، فقط به گزارشات دسترسی دارید.',
+            adminUser: adminUserToJson(newUser),
+          },
+          201,
+        );
+      }
+
+      if (path === '/api/admin/user-login' && method === 'POST') {
+        const body = await request.json<any>();
+        const { phone, password } = body;
+        if (!phone || !password) return json({ error: 'شماره موبایل و رمز عبور الزامی است.' }, 400);
+        const user = await env.DB.prepare('SELECT * FROM admin_users WHERE phone = ?')
+          .bind(phone)
+          .first<any>();
+        if (!user || user.password !== password) {
+          return json({ error: 'شماره موبایل یا رمز عبور اشتباه است.' }, 401);
+        }
+        const sessionToken = genSessionToken();
+        await env.DB.prepare('UPDATE admin_users SET session_token = ? WHERE id = ?')
+          .bind(sessionToken, user.id)
+          .run();
+        return json({ adminUser: adminUserToJson({ ...user, session_token: sessionToken }), session: sessionToken });
+      }
+
+      // ===================== ADMIN ONLY (requires X-Admin-Token or X-Admin-Session) =====================
 
       const requiresAdmin =
         path.startsWith('/api/admin') ||
@@ -629,8 +716,46 @@ export default {
       // server-side session store exists yet). See MARKETER_APP_HANDOFF.md
       // section 5 for this explicit decision.
 
-      if (requiresAdmin && path !== '/api/admin/login' && !isAuthorized(request, env)) {
-        return json({ error: 'دسترسی غیرمجاز. توکن ادمین نامعتبر است.' }, 401);
+      const publicAdminPaths = ['/api/admin/login', '/api/admin/user-signup', '/api/admin/user-login'];
+
+      if (requiresAdmin && !publicAdminPaths.includes(path) && !(await isAdminAuthorized(request, env))) {
+        return json({ error: 'دسترسی غیرمجاز. لطفاً دوباره وارد شوید.' }, 401);
+      }
+
+      // --- MANAGER APP: WHO AM I (resolve session -> user, for page refresh) ---
+      if (path === '/api/admin/me' && method === 'GET') {
+        const sessionUser = await getSessionAdminUser(request, env);
+        if (sessionUser) return json({ adminUser: adminUserToJson(sessionUser) });
+        if (isAuthorized(request, env)) {
+          return json({
+            adminUser: { id: 0, first_name: 'مدیر', last_name: 'کل', phone: '', role: 'مدیرکل', status: 'active', created_at: '' },
+          });
+        }
+        return json({ error: 'دسترسی غیرمجاز' }, 401);
+      }
+
+      // --- MANAGER APP: LIST / APPROVE / REJECT admin users (مدیرکل only) ---
+      if (path === '/api/admin/users' && method === 'GET') {
+        const rows = await env.DB.prepare('SELECT * FROM admin_users ORDER BY id DESC').all();
+        return json({ adminUsers: (rows.results as any[]).map(adminUserToJson) });
+      }
+
+      const adminUserMatch = path.match(/^\/api\/admin\/users\/(\d+)$/);
+      if (adminUserMatch && method === 'PATCH') {
+        const id = adminUserMatch[1];
+        const body = await request.json<any>();
+        if (body.role !== undefined) {
+          await env.DB.prepare(`UPDATE admin_users SET role = ?, status = 'active' WHERE id = ?`)
+            .bind(body.role, id)
+            .run();
+        }
+        const updated = await env.DB.prepare('SELECT * FROM admin_users WHERE id = ?').bind(id).first();
+        return json({ adminUser: adminUserToJson(updated) });
+      }
+      if (adminUserMatch && method === 'DELETE') {
+        const id = adminUserMatch[1];
+        await env.DB.prepare('DELETE FROM admin_users WHERE id = ?').bind(id).run();
+        return json({ ok: true });
       }
 
       // --- ADMIN LOGIN (verify token) ---
@@ -662,15 +787,26 @@ export default {
 
       // --- ADMIN: LIST ALL CUSTOMERS ---
       if (path === '/api/admin/customers' && method === 'GET') {
-        const rows = await env.DB.prepare('SELECT * FROM customers ORDER BY id DESC').all();
-        return json({ customers: (rows.results as any[]).map(customerToJson) });
+        const rows = await env.DB.prepare(
+          `SELECT c.*,
+                  (SELECT COUNT(*) FROM orders o WHERE o.customer_id = c.id) as total_orders_count,
+                  (SELECT COALESCE(SUM(o.final_amount),0) FROM orders o WHERE o.customer_id = c.id) as total_spent,
+                  (SELECT MAX(o.order_date) FROM orders o WHERE o.customer_id = c.id) as last_order_date
+           FROM customers c ORDER BY c.id DESC`,
+        ).all();
+        return json({ customers: (rows.results as any[]).map(marketerCustomerToJson) });
       }
 
-      // --- ADMIN: LIST ALL ORDERS (with customer info + items) ---
+      // --- ADMIN: LIST ALL ORDERS (with customer + marketer info + items) ---
       if (path === '/api/admin/orders' && method === 'GET') {
         const rows = await env.DB.prepare(
-          `SELECT o.*, c.store_name as customer_store_name, c.phone as customer_phone
-           FROM orders o JOIN customers c ON o.customer_id = c.id
+          `SELECT o.*, c.store_name as store_name, c.phone as customer_phone,
+                  (c.first_name || ' ' || c.last_name) as customer_name,
+                  c.marketer_id as marketer_id,
+                  (m.first_name || ' ' || m.last_name) as marketer_name
+           FROM orders o
+           JOIN customers c ON o.customer_id = c.id
+           LEFT JOIN marketers m ON c.marketer_id = m.id
            ORDER BY o.id DESC`,
         ).all();
 
@@ -692,8 +828,51 @@ export default {
         }
 
         return json({
-          orders: orderRows.map((o) => ({ ...o, items: itemsByOrder[o.id] || [] })),
+          orders: orderRows.map((o) => ({
+            ...o,
+            order_code: 'SB-' + o.id,
+            items: itemsByOrder[o.id] || [],
+          })),
         });
+      }
+
+      // --- ADMIN: UPDATE CUSTOMER (marketer reassignment / active toggle) ---
+      const adminCustomerMatch = path.match(/^\/api\/admin\/customers\/(\d+)$/);
+      if (adminCustomerMatch && method === 'PATCH') {
+        const id = adminCustomerMatch[1];
+        const body = await request.json<any>();
+        if (body.marketer_id !== undefined) {
+          await env.DB.prepare('UPDATE customers SET marketer_id = ? WHERE id = ?')
+            .bind(body.marketer_id, id)
+            .run();
+        }
+        if (body.active !== undefined) {
+          await env.DB.prepare('UPDATE customers SET active = ? WHERE id = ?')
+            .bind(body.active ? 1 : 0, id)
+            .run();
+        }
+        const updated = await env.DB.prepare('SELECT * FROM customers WHERE id = ?').bind(id).first<any>();
+        return json({ customer: marketerCustomerToJson({ ...updated, total_orders_count: 0, total_spent: 0 }) });
+      }
+
+      // --- ADMIN: CREATE A MARKETER DIRECTLY (active immediately) ---
+      if (path === '/api/admin/marketers' && method === 'POST') {
+        const body = await request.json<any>();
+        const { first_name, last_name, phone, region, monthly_target } = body;
+        if (!first_name || !last_name || !phone) return json({ error: 'اطلاعات ناقص است.' }, 400);
+        const existing = await env.DB.prepare('SELECT id FROM marketers WHERE phone = ?').bind(phone).first();
+        if (existing) return json({ error: 'این شماره موبایل قبلاً ثبت شده است.' }, 409);
+        const personnelCode = 'MK-' + Math.floor(1000 + Math.random() * 9000);
+        const result = await env.DB.prepare(
+          `INSERT INTO marketers (first_name, last_name, phone, password, region, personnel_code, active, monthly_target)
+           VALUES (?, ?, ?, 'CHANGE_ME_ON_FIRST_LOGIN', ?, ?, 1, ?)`,
+        )
+          .bind(first_name, last_name, phone, region || '', personnelCode, monthly_target || 0)
+          .run();
+        const created = await env.DB.prepare('SELECT * FROM marketers WHERE id = ?')
+          .bind(result.meta.last_row_id)
+          .first();
+        return json({ marketer: marketerToJson(created) }, 201);
       }
 
       // --- UPDATE ORDER STATUS (admin dashboard or marketer app) ---
@@ -856,12 +1035,32 @@ export default {
       if (adminMarketerMatch && method === 'PATCH') {
         const id = adminMarketerMatch[1];
         const body = await request.json<any>();
-
         const before = await env.DB.prepare('SELECT active FROM marketers WHERE id = ?').bind(id).first<any>();
 
-        await env.DB.prepare('UPDATE marketers SET active = ? WHERE id = ?')
-          .bind(body.active ? 1 : 0, id)
-          .run();
+        const fields: string[] = [];
+        const values: any[] = [];
+        if (body.active !== undefined) {
+          fields.push('active = ?');
+          values.push(body.active ? 1 : 0);
+        }
+        if (body.region !== undefined) {
+          fields.push('region = ?');
+          values.push(body.region);
+        }
+        if (body.monthly_target !== undefined) {
+          fields.push('monthly_target = ?');
+          values.push(body.monthly_target);
+        }
+        if (body.personnel_code !== undefined) {
+          fields.push('personnel_code = ?');
+          values.push(body.personnel_code);
+        }
+        if (fields.length > 0) {
+          values.push(id);
+          await env.DB.prepare(`UPDATE marketers SET ${fields.join(', ')} WHERE id = ?`)
+            .bind(...values)
+            .run();
+        }
         const updated = await env.DB.prepare('SELECT * FROM marketers WHERE id = ?').bind(id).first();
 
         // Notify the marketer only on the transition from inactive -> active,
@@ -880,6 +1079,38 @@ export default {
         }
 
         return json({ marketer: marketerToJson(updated) });
+      }
+
+      // --- ADMIN: LIST ALL WEEKLY OFFERS (active + inactive, for the manager app) ---
+      if (path === '/api/admin/weekly-offers' && method === 'GET') {
+        const offers = await env.DB.prepare('SELECT * FROM weekly_offers ORDER BY created_at DESC').all();
+        const offerRows = offers.results as any[];
+        if (offerRows.length === 0) return json({ offers: [] });
+        const offerIds = offerRows.map((o) => o.id);
+        const placeholders = offerIds.map(() => '?').join(',');
+        const itemsResult = await env.DB.prepare(
+          `SELECT offer_id, product_id, quantity FROM weekly_offer_items WHERE offer_id IN (${placeholders})`,
+        )
+          .bind(...offerIds)
+          .all();
+        const itemsByOffer: Record<string, any[]> = {};
+        for (const it of itemsResult.results as any[]) {
+          if (!itemsByOffer[it.offer_id]) itemsByOffer[it.offer_id] = [];
+          itemsByOffer[it.offer_id].push({ productId: it.product_id, quantity: it.quantity });
+        }
+        return json({
+          offers: offerRows.map((o) => ({
+            id: o.id,
+            title: o.title,
+            imageUrl: o.image_url,
+            discountPercentage: o.discount_percentage,
+            price: o.price,
+            consumerPrice: o.consumer_price,
+            expiresAt: o.expires_at,
+            active: !!o.active,
+            items: itemsByOffer[o.id] || [],
+          })),
+        });
       }
 
       // --- ADMIN: CREATE WEEKLY OFFER (with items) ---
