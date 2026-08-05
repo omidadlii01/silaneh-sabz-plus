@@ -36,6 +36,8 @@ import { OrdersView } from './components/OrdersView';
 import { VisitorView } from './components/VisitorView';
 import { ProfileView } from './components/ProfileView';
 import { AuthView } from './components/AuthView';
+import { OfflineOverlay } from './components/OfflineOverlay';
+import { useOnlineStatus } from './hooks/useOnlineStatus';
 
 const GUEST_PROFILE: UserProfileData = {
   storeName: '',
@@ -50,6 +52,7 @@ const GUEST_PROFILE: UserProfileData = {
 };
 
 export default function App() {
+  const { isOnline, recheckNow } = useOnlineStatus();
   const [activeTab, setActiveTab] = useState<TabType>('home');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -357,6 +360,10 @@ export default function App() {
     category: cat,
     products: products.filter((p) => p.categoryId === cat.id),
   }));
+
+  if (!isOnline) {
+    return <OfflineOverlay onRetry={recheckNow} />;
+  }
 
   if (isCatalogLoading && products.length === 0) {
     // Matches the original branded splash screen (index.html's #app-splash,

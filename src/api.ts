@@ -10,7 +10,7 @@ import {
 import { assetUrl } from './utils/assets';
 import { IMAGE_FALLBACK } from './utils/image';
 
-const API_BASE_URL = 'https://silaneh-sabz-api.omidadli78.workers.dev';
+export const API_BASE_URL = 'https://silaneh-sabz-api.omidadli78.workers.dev';
 
 export interface ApiError {
   error: string;
