@@ -457,7 +457,9 @@ export default {
         );
       }
 
-      // --- MARKETER LOGIN (public) ---
+      // --- MARKETER LOGIN (public; inactive accounts are allowed to log in so
+      //     the app can show them a locked "pending approval" screen instead
+      //     of just rejecting the login outright) ---
       if (path === '/api/marketer/login' && method === 'POST') {
         const body = await request.json<any>();
         const { phone, password } = body;
@@ -473,14 +475,19 @@ export default {
         if (marketer.password !== password) {
           return json({ error: 'رمز عبور اشتباه است.' }, 401);
         }
-        if (!marketer.active) {
-          return json(
-            { error: 'حساب شما هنوز توسط مدیر سیستم تایید نشده است', code: 'ACCOUNT_NOT_ACTIVE', active: false },
-            403,
-          );
-        }
 
         return json({ marketer: marketerToJson(marketer), token: `marketer-session-${marketer.id}` });
+      }
+
+      // --- MARKETER: GET OWN PROFILE (lightweight, used for polling active-status
+      //     while the account is pending approval) ---
+      const marketerProfileMatch = path.match(/^\/api\/marketer\/(\d+)$/);
+      if (marketerProfileMatch && method === 'GET') {
+        const marketer = await env.DB.prepare('SELECT * FROM marketers WHERE id = ?')
+          .bind(marketerProfileMatch[1])
+          .first<any>();
+        if (!marketer) return json({ error: 'بازاریاب یافت نشد.' }, 404);
+        return json({ marketer: marketerToJson(marketer) });
       }
 
       // --- MARKETER: LIST OWN CUSTOMERS ---
@@ -849,10 +856,29 @@ export default {
       if (adminMarketerMatch && method === 'PATCH') {
         const id = adminMarketerMatch[1];
         const body = await request.json<any>();
+
+        const before = await env.DB.prepare('SELECT active FROM marketers WHERE id = ?').bind(id).first<any>();
+
         await env.DB.prepare('UPDATE marketers SET active = ? WHERE id = ?')
           .bind(body.active ? 1 : 0, id)
           .run();
         const updated = await env.DB.prepare('SELECT * FROM marketers WHERE id = ?').bind(id).first();
+
+        // Notify the marketer only on the transition from inactive -> active,
+        // so re-saving an already-active marketer doesn't spam a notification.
+        if (body.active && before && !before.active) {
+          await env.DB.prepare(
+            `INSERT INTO notifications (recipient_type, recipient_id, type, title, message)
+             VALUES ('marketer', ?, 'account_approved', ?, ?)`,
+          )
+            .bind(
+              id,
+              'دسترسی شما تایید شد',
+              'دسترسی شما به اپ بازاریابی سیلانه سبز تایید شد. هم‌اکنون می‌توانید از تمامی خدمات این اپ استفاده کنید.',
+            )
+            .run();
+        }
+
         return json({ marketer: marketerToJson(updated) });
       }
 
