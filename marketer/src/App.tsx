@@ -18,9 +18,11 @@ import { CustomerSimulatorModal } from './components/common/CustomerSimulatorMod
 import { ApiConfigModal } from './components/profile/ApiConfigModal';
 import { LoginView } from './components/auth/LoginView';
 import { SignupView } from './components/auth/SignupView';
+import { PendingApprovalModal } from './components/auth/PendingApprovalModal';
+import { PendingLockScreen } from './components/common/PendingLockScreen';
 
 const MainApp: React.FC = () => {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { marketer, isAuthenticated, isLoading, justSignedUp, clearJustSignedUp } = useAuth();
   const { activeTab } = useApp();
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
 
@@ -40,6 +42,27 @@ const MainApp: React.FC = () => {
       <SignupView onSwitchToLogin={() => setAuthMode('login')} />
     ) : (
       <LoginView onSwitchToSignup={() => setAuthMode('signup')} />
+    );
+  }
+
+  // Account still pending admin approval: right after signup, show the
+  // one-time "thank you, please wait" modal; afterwards (and on any future
+  // login while still pending) show the persistent locked screen — every
+  // feature stays inaccessible until an admin approves the account.
+  if (marketer && marketer.active !== true && marketer.active !== 1) {
+    if (justSignedUp) {
+      return (
+        <>
+          <PendingApprovalModal onDismiss={clearJustSignedUp} />
+          <ToastContainer />
+        </>
+      );
+    }
+    return (
+      <>
+        <PendingLockScreen />
+        <ToastContainer />
+      </>
     );
   }
 

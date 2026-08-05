@@ -20,6 +20,8 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   apiBaseUrl: string;
+  justSignedUp: boolean;
+  clearJustSignedUp: () => void;
   login: (phone: string, password?: string) => Promise<LoginResult>;
   signup: (data: MarketerSignupData) => Promise<SignupResult>;
   logout: () => void;
@@ -36,6 +38,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [apiBaseUrl, setApiBaseUrlState] = useState<string>(apiService.getBaseUrl());
+  const [justSignedUp, setJustSignedUp] = useState(false);
 
   useEffect(() => {
     // Restore session if available
@@ -43,7 +46,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const savedAuth = localStorage.getItem(AUTH_STORAGE_KEY);
       if (savedAuth) {
         const parsed = JSON.parse(savedAuth);
-        if (parsed.marketer && parsed.token && parsed.marketer.active !== false && parsed.marketer.active !== 0) {
+        if (parsed.marketer && parsed.token) {
+          // Pending-approval marketers (active === false/0) keep their
+          // session too — the app shows them a locked screen instead of
+          // logging them out on every reload.
           const { password: _p, ...safeMarketer } = parsed.marketer;
           setMarketer(safeMarketer as Marketer);
           setToken(parsed.token);
@@ -85,6 +91,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setIsLoading(true);
     try {
       const res = await apiService.signupMarketer(data);
+      // Auto-login immediately after a successful signup so the marketer
+      // enters the app right away instead of having to log in separately.
+      // The account is still inactive/pending at this point — the app will
+      // show a locked screen (see PendingLockScreen) until an admin approves it.
+      try {
+        await login(data.phone, data.password);
+        setJustSignedUp(true);
+      } catch (loginErr) {
+        // Signup itself succeeded even if the immediate auto-login failed
+        // (e.g. transient network issue) — the user can still log in manually.
+        console.warn('Auto-login after signup failed', loginErr);
+      }
       return { success: true, message: res.message };
     } catch (err: unknown) {
       console.error('Signup failed', err);
@@ -97,6 +115,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setIsLoading(false);
     }
   };
+
+  const clearJustSignedUp = () => setJustSignedUp(false);
 
   const logout = () => {
     setMarketer(null);
@@ -126,6 +146,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         isAuthenticated: !!marketer,
         isLoading,
         apiBaseUrl,
+        justSignedUp,
+        clearJustSignedUp,
         login,
         signup,
         logout,

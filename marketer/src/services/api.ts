@@ -562,57 +562,50 @@ export class ApiService {
     const cleanPhone = toEnglishDigits(phone).trim();
 
     if (this.baseUrl) {
+      let response: Response | undefined;
       try {
-        const response = await fetch(`${this.baseUrl}/api/marketer/login`, {
+        response = await fetch(`${this.baseUrl}/api/marketer/login`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ phone: cleanPhone, password }),
         });
+      } catch (err) {
+        // Genuine network failure — fall back to local simulation below.
+        console.warn('Network error during login, falling back to local simulation', err);
+      }
+
+      if (response) {
         const data = await response.json().catch(() => ({}));
         if (response.ok && (data.marketer || data.user)) {
+          // Inactive (pending-approval) accounts are intentionally allowed to
+          // log in — the app shows them a locked "pending approval" screen
+          // instead of rejecting the login outright (mirrors the backend's
+          // documented intent for POST /api/marketer/login).
           const rawMarketer = data.marketer || data.user || data;
           const marketerData: Marketer = sanitizeMarketer(rawMarketer);
-          if (marketerData.active === false || marketerData.active === 0) {
-            const err = new Error('حساب شما هنوز توسط مدیر سیستم تایید نشده است');
-            (err as unknown as { code?: string }).code = 'ACCOUNT_NOT_ACTIVE';
-            throw err;
-          }
           saveStoredData(STORAGE_KEYS.MARKETER, marketerData);
           return { marketer: marketerData, token: data.token || 'mock-jwt-token' };
-        } else {
-          const isPending =
-            data.active === false ||
-            data.code === 'ACCOUNT_NOT_ACTIVE' ||
-            data.error?.includes('تایید نشده') ||
-            data.message?.includes('تایید نشده');
-
-          const err = new Error(isPending ? 'حساب شما هنوز توسط مدیر سیستم تایید نشده است' : (data.message || data.error || 'ورود با خطا مواجه شد. لطفاً مجدداً بررسی نمایید.'));
-          (err as unknown as { code?: string }).code = isPending ? 'ACCOUNT_NOT_ACTIVE' : (data.code || 'LOGIN_FAILED');
-          throw err;
         }
-      } catch (err: unknown) {
-        const errObj = err as { code?: string; message?: string };
-        if (errObj?.code === 'ACCOUNT_NOT_ACTIVE' || errObj?.message === 'حساب شما هنوز توسط مدیر سیستم تایید نشده است') {
-          throw err;
-        }
-        console.warn('Backend API login error, falling back to local auth', err);
+        // A real response came back and it's an error (wrong password, not
+        // found, etc.) — this must propagate to the caller, not be silently
+        // swallowed into a confusing local-fallback attempt.
+        const err = new Error(data.message || data.error || 'ورود با خطا مواجه شد. لطفاً مجدداً بررسی نمایید.');
+        (err as unknown as { code?: string }).code = data.code || 'LOGIN_FAILED';
+        throw err;
       }
     }
 
-    // Local authentication fallback
+    // Local authentication fallback (only reached when there's no baseUrl at
+    // all, or a genuine network failure prevented reaching the API)
     return new Promise((resolve, reject) => {
       setTimeout(() => {
         const marketers = getStoredData<Marketer[]>(STORAGE_KEYS.MARKETERS, INITIAL_MARKETERS);
         const found = marketers.find((m) => toEnglishDigits(m.phone).trim() === cleanPhone);
 
         if (found) {
+          // Inactive (pending-approval) accounts are allowed to "log in" here
+          // too, consistent with the live API — the app locks the UI instead.
           const safeFound = sanitizeMarketer(found);
-          if (safeFound.active === false || safeFound.active === 0) {
-            const err = new Error('حساب شما هنوز توسط مدیر سیستم تایید نشده است');
-            (err as unknown as { code?: string }).code = 'ACCOUNT_NOT_ACTIVE';
-            reject(err);
-            return;
-          }
           saveStoredData(STORAGE_KEYS.MARKETER, safeFound);
           resolve({ marketer: safeFound, token: `local-auth-token-${safeFound.id}` });
           return;
@@ -632,6 +625,27 @@ export class ApiService {
         reject(err);
       }, 400);
     });
+  }
+
+  // Lightweight profile re-fetch — used to poll whether a pending-approval
+  // marketer account has been activated by an admin yet.
+  public async getMarketerProfile(marketerId: number): Promise<Marketer | null> {
+    if (this.baseUrl) {
+      try {
+        const response = await fetch(`${this.baseUrl}/api/marketer/${marketerId}`);
+        if (response.ok) {
+          const data = await response.json().catch(() => ({}));
+          if (data.marketer) return sanitizeMarketer(data.marketer);
+        }
+      } catch (err) {
+        console.warn('Failed to poll marketer profile', err);
+      }
+      return null;
+    }
+
+    const marketers = getStoredData<Marketer[]>(STORAGE_KEYS.MARKETERS, INITIAL_MARKETERS);
+    const found = marketers.find((m) => m.id === marketerId);
+    return found ? sanitizeMarketer(found) : null;
   }
 
   public async signupMarketer(data: MarketerSignupData): Promise<{ success: boolean; message: string; marketer?: Marketer }> {
