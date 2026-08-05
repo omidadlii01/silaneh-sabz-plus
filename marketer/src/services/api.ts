@@ -638,8 +638,9 @@ export class ApiService {
     const cleanPhone = toEnglishDigits(data.phone).trim();
 
     if (this.baseUrl) {
+      let response: Response | undefined;
       try {
-        const response = await fetch(`${this.baseUrl}/api/marketer/signup`, {
+        response = await fetch(`${this.baseUrl}/api/marketer/signup`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -650,6 +651,12 @@ export class ApiService {
             region: data.region?.trim() || 'تهران',
           }),
         });
+      } catch (err) {
+        // Genuine network failure — fall back to local simulation below.
+        console.warn('Network error during signup, falling back to local simulation', err);
+      }
+
+      if (response) {
         const resData = await response.json().catch(() => ({}));
         if (response.ok) {
           const safeMarketer = resData.marketer ? sanitizeMarketer(resData.marketer) : undefined;
@@ -658,11 +665,11 @@ export class ApiService {
             message: resData.message || 'ثبت‌نام شما با موفقیت انجام شد. حساب شما پس از تایید مدیر سیستم فعال خواهد شد.',
             marketer: safeMarketer,
           };
-        } else {
-          throw new Error(resData.message || resData.error || 'خطا در انجام ثبت‌نام');
         }
-      } catch (err: unknown) {
-        console.warn('Backend API signup error, falling back to local simulation', err);
+        // A real response came back and it's an error (e.g. duplicate phone) —
+        // this must propagate to the caller, not be swallowed into a fake
+        // "successful" local signup.
+        throw new Error(resData.message || resData.error || 'خطا در انجام ثبت‌نام');
       }
     }
 
@@ -755,8 +762,9 @@ export class ApiService {
     const cleanPhone = toEnglishDigits(payload.phone).trim();
 
     if (this.baseUrl) {
+      let response: Response | undefined;
       try {
-        const response = await fetch(`${this.baseUrl}/api/marketer/${marketerId}/customers`, {
+        response = await fetch(`${this.baseUrl}/api/marketer/${marketerId}/customers`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -769,6 +777,12 @@ export class ApiService {
             city: payload.city || 'تهران',
           }),
         });
+      } catch (err) {
+        // Genuine network failure (offline, DNS, etc) — fall back to local mock below.
+        console.warn('Network error saving customer, falling back to local storage', err);
+      }
+
+      if (response) {
         if (response.ok) {
           const data = await response.json();
           const newCustomer = data.customer || data;
@@ -776,12 +790,16 @@ export class ApiService {
           saveStoredData(STORAGE_KEYS.CUSTOMERS, [newCustomer, ...list]);
           return newCustomer;
         }
-      } catch (err) {
-        console.warn('Failed saving customer to API, saving locally', err);
+        // Real server response received but it's an error (e.g. duplicate phone,
+        // validation failure) — surface it to the caller. Must NOT silently fall
+        // back to a fake local success, or the user has no idea the save failed.
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || errData.message || 'ثبت مشتری با خطا مواجه شد.');
       }
     }
 
-    // Local storage persistence
+    // Local storage persistence (only reached when there's no baseUrl at all,
+    // or a genuine network failure prevented reaching the server)
     return new Promise((resolve) => {
       const list = getStoredData<Customer[]>(STORAGE_KEYS.CUSTOMERS, INITIAL_CUSTOMERS);
       const newId = Date.now();
@@ -852,12 +870,18 @@ export class ApiService {
     marketerId?: number;
   }): Promise<Order> {
     if (this.baseUrl) {
+      let response: Response | undefined;
       try {
-        const response = await fetch(`${this.baseUrl}/api/orders`, {
+        response = await fetch(`${this.baseUrl}/api/orders`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(orderPayload),
         });
+      } catch (err) {
+        console.warn('Network error saving order, falling back to local storage', err);
+      }
+
+      if (response) {
         if (response.ok) {
           const data = await response.json();
           const newOrder = data.order || data;
@@ -865,8 +889,8 @@ export class ApiService {
           saveStoredData(STORAGE_KEYS.ORDERS, [newOrder, ...list]);
           return newOrder;
         }
-      } catch (err) {
-        console.warn('Failed saving order to API, saving locally', err);
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || errData.message || 'ثبت سفارش با خطا مواجه شد.');
       }
     }
 
@@ -926,12 +950,18 @@ export class ApiService {
 
   public async updateOrderStatus(orderId: number, status: OrderStatus, marketerNote?: string): Promise<Order> {
     if (this.baseUrl) {
+      let response: Response | undefined;
       try {
-        const response = await fetch(`${this.baseUrl}/api/orders/${orderId}/status`, {
+        response = await fetch(`${this.baseUrl}/api/orders/${orderId}/status`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ status, marketer_note: marketerNote }),
         });
+      } catch (err) {
+        console.warn('Network error updating order status, falling back to local storage', err);
+      }
+
+      if (response) {
         if (response.ok) {
           const data = await response.json();
           const updated = data.order || data;
@@ -943,8 +973,8 @@ export class ApiService {
           }
           return updated;
         }
-      } catch (err) {
-        console.warn('Failed updating order status in API, updating locally', err);
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || errData.message || 'تغییر وضعیت سفارش با خطا مواجه شد.');
       }
     }
 

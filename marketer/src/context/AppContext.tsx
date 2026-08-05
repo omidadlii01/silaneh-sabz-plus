@@ -295,7 +295,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       return true;
     } catch (err) {
       console.error('Failed updating status', err);
-      showToast('خطا در تغییر وضعیت سفارش', 'error');
+      const msg = err instanceof Error && err.message ? err.message : 'خطا در تغییر وضعیت سفارش';
+      showToast(msg, 'error');
       return false;
     }
   };
@@ -329,7 +330,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       return newCustomer;
     } catch (err) {
       console.error('Failed creating customer', err);
-      showToast('خطا در ثبت مشتری جدید', 'error');
+      const msg = err instanceof Error && err.message ? err.message : 'خطا در ثبت مشتری جدید';
+      showToast(msg, 'error');
       return null;
     }
   };
@@ -428,7 +430,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       return newOrder;
     } catch (err) {
       console.error('Failed creating order', err);
-      showToast('خطا در ثبت سفارش', 'error');
+      const msg = err instanceof Error && err.message ? err.message : 'خطا در ثبت سفارش';
+      showToast(msg, 'error');
       return null;
     }
   };
