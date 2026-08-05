@@ -86,6 +86,101 @@ function brandToJson(b: any) {
   };
 }
 
+// The marketer app (unlike the customer/admin apps) works directly with
+// snake_case field names matching the DB columns, so marketer-facing JSON
+// helpers below intentionally do NOT convert to camelCase.
+
+const STATUS_FA_TO_EN: Record<string, string> = {
+  'ثبت‌شده': 'pending',
+  'در حال پردازش': 'processing',
+  'ارسال‌شده': 'shipped',
+  'تحویل‌شده': 'confirmed',
+  'لغو‌شده': 'cancelled',
+};
+const STATUS_EN_TO_FA: Record<string, string> = {
+  pending: 'ثبت‌شده',
+  confirmed: 'تحویل‌شده',
+  processing: 'در حال پردازش',
+  shipped: 'ارسال‌شده',
+  cancelled: 'لغو‌شده',
+};
+function statusToEnglish(fa: string): string {
+  return STATUS_FA_TO_EN[fa] || fa;
+}
+function statusToPersian(en: string): string {
+  return STATUS_EN_TO_FA[en] || en;
+}
+
+function marketerToJson(m: any) {
+  return {
+    id: m.id,
+    first_name: m.first_name,
+    last_name: m.last_name,
+    phone: m.phone,
+    region: m.region,
+    personnel_code: m.personnel_code,
+    active: !!m.active,
+    monthly_target: m.monthly_target,
+    achieved_sales: m.achieved_sales,
+    created_at: m.created_at,
+  };
+}
+
+function notificationToJson(n: any) {
+  return {
+    id: n.id,
+    recipient_type: n.recipient_type,
+    recipient_id: n.recipient_id,
+    type: n.type,
+    related_order_id: n.related_order_id,
+    title: n.title,
+    message: n.message,
+    is_read: !!n.is_read,
+    created_at: n.created_at,
+  };
+}
+
+function marketerCustomerToJson(c: any) {
+  return {
+    id: c.id,
+    customer_code: c.customer_code,
+    first_name: c.first_name,
+    last_name: c.last_name,
+    phone: c.phone,
+    store_name: c.store_name,
+    business_type: c.business_type,
+    address: c.address,
+    marketer_id: c.marketer_id,
+    active: !!c.active,
+    total_orders_count: c.total_orders_count || 0,
+    total_spent: c.total_spent || 0,
+    last_order_date: c.last_order_date || null,
+  };
+}
+
+function marketerOrderToJson(o: any) {
+  return {
+    id: o.id,
+    order_code: o.order_code || `SB-${o.id}`,
+    customer_id: o.customer_id,
+    customer_name: o.customer_name,
+    store_name: o.store_name,
+    customer_phone: o.customer_phone,
+    customer_address: o.customer_address,
+    business_type: o.business_type,
+    order_date: o.order_date,
+    initial_amount: o.initial_amount,
+    discount: o.discount,
+    final_amount: o.final_amount,
+    status: statusToEnglish(o.status),
+    customer_note: o.customer_note,
+    admin_note: o.admin_note,
+    marketer_note: o.marketer_note,
+    marketer_id: o.marketer_id,
+    items: o.items || [],
+  };
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
@@ -223,34 +318,250 @@ export default {
         return json({ orders: ordersWithItems });
       }
 
-      // --- CREATE ORDER ---
+      // --- CREATE ORDER (used by the customer app, and by the marketer app
+      //     placing an order on behalf of a customer — marketerNote/marketerId
+      //     are optional and only used in the latter case) ---
       if (path === '/api/orders' && method === 'POST') {
         const body = await request.json<any>();
-        const { customerId, items, initialAmount, discount, finalAmount, customerNote } = body;
+        const { customerId, items, initialAmount, discount, finalAmount, customerNote, marketerNote } = body;
 
         if (!customerId || !items || !items.length) {
           return json({ error: 'اطلاعات سفارش ناقص است.' }, 400);
         }
 
+        // Orders placed directly by a marketer are considered pre-confirmed;
+        // orders placed by the customer app itself start at the default status.
+        const initialStatus = marketerNote !== undefined || body.marketerId ? 'تحویل‌شده' : 'ثبت‌شده';
+
         const orderResult = await env.DB.prepare(
-          `INSERT INTO orders (customer_id, initial_amount, discount, final_amount, status, customer_note)
-           VALUES (?, ?, ?, ?, ?, ?)`,
+          `INSERT INTO orders (customer_id, initial_amount, discount, final_amount, status, customer_note, marketer_note)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
         )
-          .bind(customerId, initialAmount, discount || 0, finalAmount, 'ثبت‌شده', customerNote || '')
+          .bind(customerId, initialAmount, discount || 0, finalAmount, initialStatus, customerNote || '', marketerNote || null)
           .run();
 
         const orderId = orderResult.meta.last_row_id;
 
         for (const item of items) {
+          const productId = item.productId ?? item.product_id;
+          const productName = item.productName ?? item.product_name;
+          const unitPrice = item.unitPrice ?? item.unit_price;
+          const totalPrice = item.totalPrice ?? item.total_price;
           await env.DB.prepare(
             `INSERT INTO order_items (order_id, product_id, product_name, quantity, unit_price, total_price)
              VALUES (?, ?, ?, ?, ?, ?)`,
           )
-            .bind(orderId, item.productId, item.productName, item.quantity, item.unitPrice, item.totalPrice)
+            .bind(orderId, productId, productName, item.quantity, unitPrice, totalPrice)
+            .run();
+        }
+
+        // Notify the customer's marketer that a new order came in (covers
+        // both the customer-app flow and the marketer-app-direct flow).
+        const owningCustomer = await env.DB.prepare('SELECT marketer_id, store_name FROM customers WHERE id = ?')
+          .bind(customerId)
+          .first<any>();
+        if (owningCustomer?.marketer_id) {
+          await env.DB.prepare(
+            `INSERT INTO notifications (recipient_type, recipient_id, type, related_order_id, title, message)
+             VALUES ('marketer', ?, 'new_order', ?, ?, ?)`,
+          )
+            .bind(
+              owningCustomer.marketer_id,
+              orderId,
+              'سفارش جدید دریافت شد',
+              `«${owningCustomer.store_name}» سفارش جدیدی به ارزش ${Number(finalAmount).toLocaleString('fa-IR')} تومان ثبت کرد.`,
+            )
             .run();
         }
 
         return json({ orderId, orderNumber: genOrderNumber() }, 201);
+      }
+
+      // ===================== MARKETER APP =====================
+
+      // --- MARKETER SIGNUP (public; account stays inactive until admin approval) ---
+      if (path === '/api/marketer/signup' && method === 'POST') {
+        const body = await request.json<any>();
+        const { first_name, last_name, phone, password, region } = body;
+
+        if (!first_name || !last_name || !phone || !password) {
+          return json({ error: 'اطلاعات ناقص است.' }, 400);
+        }
+
+        const existing = await env.DB.prepare('SELECT id FROM marketers WHERE phone = ?')
+          .bind(phone)
+          .first();
+        if (existing) {
+          return json({ error: 'این شماره موبایل قبلاً در سامانه ثبت شده است.' }, 409);
+        }
+
+        const personnelCode = 'MK-' + Math.floor(1000 + Math.random() * 9000);
+        const result = await env.DB.prepare(
+          `INSERT INTO marketers (first_name, last_name, phone, password, region, personnel_code, active)
+           VALUES (?, ?, ?, ?, ?, ?, 0)`,
+        )
+          .bind(first_name, last_name, phone, password, region || 'تهران', personnelCode)
+          .run();
+
+        const newMarketer = await env.DB.prepare('SELECT * FROM marketers WHERE id = ?')
+          .bind(result.meta.last_row_id)
+          .first();
+
+        return json(
+          {
+            message: 'ثبت‌نام شما با موفقیت انجام شد. حساب شما پس از تایید مدیر سیستم فعال خواهد شد.',
+            marketer: marketerToJson(newMarketer),
+          },
+          201,
+        );
+      }
+
+      // --- MARKETER LOGIN (public) ---
+      if (path === '/api/marketer/login' && method === 'POST') {
+        const body = await request.json<any>();
+        const { phone, password } = body;
+        if (!phone || !password) return json({ error: 'شماره موبایل و رمز عبور الزامی است.' }, 400);
+
+        const marketer = await env.DB.prepare('SELECT * FROM marketers WHERE phone = ?')
+          .bind(phone)
+          .first<any>();
+
+        if (!marketer) {
+          return json({ error: 'حسابی با این شماره موبایل یافت نشد. لطفاً ابتدا ثبت‌نام کنید.' }, 404);
+        }
+        if (marketer.password !== password) {
+          return json({ error: 'رمز عبور اشتباه است.' }, 401);
+        }
+        if (!marketer.active) {
+          return json(
+            { error: 'حساب شما هنوز توسط مدیر سیستم تایید نشده است', code: 'ACCOUNT_NOT_ACTIVE', active: false },
+            403,
+          );
+        }
+
+        return json({ marketer: marketerToJson(marketer), token: `marketer-session-${marketer.id}` });
+      }
+
+      // --- MARKETER: LIST OWN CUSTOMERS ---
+      const marketerCustomersMatch = path.match(/^\/api\/marketer\/(\d+)\/customers$/);
+      if (marketerCustomersMatch && method === 'GET') {
+        const marketerId = marketerCustomersMatch[1];
+        const rows = await env.DB.prepare(
+          `SELECT c.*,
+                  (SELECT COUNT(*) FROM orders o WHERE o.customer_id = c.id) as total_orders_count,
+                  (SELECT COALESCE(SUM(o.final_amount),0) FROM orders o WHERE o.customer_id = c.id) as total_spent,
+                  (SELECT MAX(o.order_date) FROM orders o WHERE o.customer_id = c.id) as last_order_date
+           FROM customers c WHERE c.marketer_id = ? ORDER BY c.id DESC`,
+        )
+          .bind(marketerId)
+          .all();
+        return json({ customers: (rows.results as any[]).map(marketerCustomerToJson) });
+      }
+
+      // --- MARKETER: CREATE CUSTOMER (on behalf of a new store) ---
+      if (marketerCustomersMatch && method === 'POST') {
+        const marketerId = marketerCustomersMatch[1];
+        const body = await request.json<any>();
+        const { firstName, lastName, phone, storeName, businessType, address } = body;
+
+        if (!firstName || !lastName || !phone || !storeName) {
+          return json({ error: 'اطلاعات ناقص است.' }, 400);
+        }
+
+        const existing = await env.DB.prepare('SELECT id FROM customers WHERE phone = ?')
+          .bind(phone)
+          .first();
+        if (existing) {
+          return json({ error: 'شماره موبایل تکراری است' }, 409);
+        }
+
+        const customerCode = genCustomerCode();
+        const result = await env.DB.prepare(
+          `INSERT INTO customers (customer_code, first_name, last_name, phone, password, store_name, business_type, address, marketer_id, marketer_name, marketer_phone)
+           VALUES (?, ?, ?, ?, '', ?, ?, ?, ?, ?, ?)`,
+        )
+          .bind(
+            customerCode,
+            firstName,
+            lastName,
+            phone,
+            storeName,
+            businessType || 'pharmacy',
+            address || '',
+            marketerId,
+            'بازاریاب سیلانه سبز',
+            '۰۹۱۲۰۰۰۰۰۰۰',
+          )
+          .run();
+
+        const newCustomer = await env.DB.prepare('SELECT * FROM customers WHERE id = ?')
+          .bind(result.meta.last_row_id)
+          .first<any>();
+
+        await env.DB.prepare(
+          `INSERT INTO notifications (recipient_type, recipient_id, type, title, message)
+           VALUES ('marketer', ?, 'customer_registered', ?, ?)`,
+        )
+          .bind(marketerId, 'مشتری جدید ثبت شد', `مشتری «${storeName}» با موفقیت به لیست شما اضافه شد.`)
+          .run();
+
+        return json({ customer: marketerCustomerToJson({ ...newCustomer, total_orders_count: 0, total_spent: 0 }) }, 201);
+      }
+
+      // --- MARKETER: LIST ORDERS FOR OWN CUSTOMERS (with items) ---
+      const marketerOrdersMatch = path.match(/^\/api\/marketer\/(\d+)\/orders$/);
+      if (marketerOrdersMatch && method === 'GET') {
+        const marketerId = marketerOrdersMatch[1];
+        const rows = await env.DB.prepare(
+          `SELECT o.*, c.store_name as store_name, c.phone as customer_phone, c.address as customer_address,
+                  c.business_type as business_type, (c.first_name || ' ' || c.last_name) as customer_name,
+                  c.marketer_id as marketer_id
+           FROM orders o JOIN customers c ON o.customer_id = c.id
+           WHERE c.marketer_id = ? ORDER BY o.id DESC`,
+        )
+          .bind(marketerId)
+          .all();
+
+        const orderRows = rows.results as any[];
+        if (orderRows.length === 0) return json({ orders: [] });
+
+        const orderIds = orderRows.map((o) => o.id);
+        const placeholders = orderIds.map(() => '?').join(',');
+        const itemsResult = await env.DB.prepare(
+          `SELECT * FROM order_items WHERE order_id IN (${placeholders}) ORDER BY id ASC`,
+        )
+          .bind(...orderIds)
+          .all();
+
+        const itemsByOrder: Record<number, any[]> = {};
+        for (const item of itemsResult.results as any[]) {
+          if (!itemsByOrder[item.order_id]) itemsByOrder[item.order_id] = [];
+          itemsByOrder[item.order_id].push(item);
+        }
+
+        return json({
+          orders: orderRows.map((o) => marketerOrderToJson({ ...o, items: itemsByOrder[o.id] || [] })),
+        });
+      }
+
+      // --- MARKETER: LIST NOTIFICATIONS ---
+      const marketerNotificationsMatch = path.match(/^\/api\/marketer\/(\d+)\/notifications$/);
+      if (marketerNotificationsMatch && method === 'GET') {
+        const marketerId = marketerNotificationsMatch[1];
+        const rows = await env.DB.prepare(
+          `SELECT * FROM notifications WHERE recipient_type = 'marketer' AND recipient_id = ? ORDER BY id DESC LIMIT 100`,
+        )
+          .bind(marketerId)
+          .all();
+        return json({ notifications: (rows.results as any[]).map(notificationToJson) });
+      }
+
+      // --- MARK NOTIFICATION READ ---
+      const notificationReadMatch = path.match(/^\/api\/notifications\/(\d+)\/read$/);
+      if (notificationReadMatch && method === 'PATCH') {
+        const id = notificationReadMatch[1];
+        await env.DB.prepare('UPDATE notifications SET is_read = 1 WHERE id = ?').bind(id).run();
+        return json({ ok: true });
       }
 
       // ===================== ADMIN ONLY (requires X-Admin-Token header) =====================
@@ -261,8 +572,12 @@ export default {
         path.startsWith('/api/products/') ||
         (path === '/api/brands' && method !== 'GET') ||
         path.startsWith('/api/brands/') ||
-        (path === '/api/settings' && method !== 'GET') ||
-        /^\/api\/orders\/\d+\/status$/.test(path);
+        (path === '/api/settings' && method !== 'GET');
+      // NOTE: PATCH /api/orders/:id/status is intentionally NOT admin-only —
+      // both the admin dashboard and the marketer app change order status,
+      // and the marketer app only has a simple session token (no real
+      // server-side session store exists yet). See MARKETER_APP_HANDOFF.md
+      // section 5 for this explicit decision.
 
       if (requiresAdmin && path !== '/api/admin/login' && !isAuthorized(request, env)) {
         return json({ error: 'دسترسی غیرمجاز. توکن ادمین نامعتبر است.' }, 401);
@@ -331,15 +646,47 @@ export default {
         });
       }
 
-      // --- ADMIN: UPDATE ORDER STATUS ---
+      // --- UPDATE ORDER STATUS (admin dashboard or marketer app) ---
       const statusMatch = path.match(/^\/api\/orders\/(\d+)\/status$/);
       if (statusMatch && method === 'PATCH') {
         const orderId = statusMatch[1];
         const body = await request.json<any>();
-        await env.DB.prepare('UPDATE orders SET status = ? WHERE id = ?')
-          .bind(body.status, orderId)
-          .run();
-        return json({ ok: true });
+        // Accept either the admin panel's Persian status values directly,
+        // or the marketer app's English status enum (translated here).
+        const persianStatus = STATUS_EN_TO_FA[body.status] ? statusToPersian(body.status) : body.status;
+
+        if (body.marketer_note !== undefined) {
+          await env.DB.prepare('UPDATE orders SET status = ?, marketer_note = ? WHERE id = ?')
+            .bind(persianStatus, body.marketer_note, orderId)
+            .run();
+        } else {
+          await env.DB.prepare('UPDATE orders SET status = ? WHERE id = ?')
+            .bind(persianStatus, orderId)
+            .run();
+        }
+
+        const updatedOrder = await env.DB.prepare(
+          `SELECT o.*, c.store_name as store_name, c.marketer_id as marketer_id
+           FROM orders o JOIN customers c ON o.customer_id = c.id WHERE o.id = ?`,
+        )
+          .bind(orderId)
+          .first<any>();
+
+        if (updatedOrder?.marketer_id) {
+          await env.DB.prepare(
+            `INSERT INTO notifications (recipient_type, recipient_id, type, related_order_id, title, message)
+             VALUES ('marketer', ?, 'order_status_change', ?, ?, ?)`,
+          )
+            .bind(
+              updatedOrder.marketer_id,
+              orderId,
+              'وضعیت سفارش تغییر کرد',
+              `سفارش «${updatedOrder.store_name}» به وضعیت «${persianStatus}» تغییر یافت.`,
+            )
+            .run();
+        }
+
+        return json({ ok: true, order: updatedOrder ? marketerOrderToJson(updatedOrder) : undefined });
       }
 
       // --- ADMIN: CREATE PRODUCT ---
@@ -446,6 +793,24 @@ export default {
         const id = brandMatch[1];
         await env.DB.prepare('UPDATE brands SET active = 0 WHERE id = ?').bind(id).run();
         return json({ ok: true });
+      }
+
+      // --- ADMIN: LIST ALL MARKETERS (for approval) ---
+      if (path === '/api/admin/marketers' && method === 'GET') {
+        const rows = await env.DB.prepare('SELECT * FROM marketers ORDER BY id DESC').all();
+        return json({ marketers: (rows.results as any[]).map(marketerToJson) });
+      }
+
+      // --- ADMIN: ACTIVATE/DEACTIVATE A MARKETER ---
+      const adminMarketerMatch = path.match(/^\/api\/admin\/marketers\/(\d+)$/);
+      if (adminMarketerMatch && method === 'PATCH') {
+        const id = adminMarketerMatch[1];
+        const body = await request.json<any>();
+        await env.DB.prepare('UPDATE marketers SET active = ? WHERE id = ?')
+          .bind(body.active ? 1 : 0, id)
+          .run();
+        const updated = await env.DB.prepare('SELECT * FROM marketers WHERE id = ?').bind(id).first();
+        return json({ marketer: marketerToJson(updated) });
       }
 
       // --- ADMIN: UPDATE APP SETTINGS ---

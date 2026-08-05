@@ -44,10 +44,25 @@ jobs:
         env:
           BASE_PATH: /${{ github.event.repository.name }}/admin/
 
+      - name: Install marketer app dependencies
+        run: npm install
+        working-directory: ./marketer
+
+      - name: Build marketer app
+        run: npm run build
+        working-directory: ./marketer
+        env:
+          BASE_PATH: /${{ github.event.repository.name }}/marketer/
+
       - name: Merge admin build into main dist
         run: |
           mkdir -p dist/admin
           cp -r admin/dist/* dist/admin/
+
+      - name: Merge marketer build into main dist
+        run: |
+          mkdir -p dist/marketer
+          cp -r marketer/dist/* dist/marketer/
 
       - name: Setup Pages
         uses: actions/configure-pages@v5

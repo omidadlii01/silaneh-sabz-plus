@@ -151,3 +151,55 @@ jobs:
           echo "Login: $LOGIN"
 
           echo "::notice::SMOKE_TEST_RESULTS signup1=$SIGNUP1 || signup2_dup=$SIGNUP2 || login=$LOGIN"
+
+      - name: Smoke test API (marketer signup, pending login, admin activate, active login, customer+order+notification flow)
+        env:
+          ADMIN_TOKEN: ${{ secrets.ADMIN_DASHBOARD_TOKEN }}
+        run: |
+          set +e
+          URL="https://silaneh-sabz-api.omidadli78.workers.dev"
+          MPHONE="09130000$RANDOM"
+
+          MSIGNUP=$(curl -s -X POST "$URL/api/marketer/signup" -H "Content-Type: application/json" -d "{\"first_name\":\"تست\",\"last_name\":\"بازاریاب\",\"phone\":\"$MPHONE\",\"password\":\"pass1234\",\"region\":\"تهران\"}")
+          echo "Marketer signup: $MSIGNUP"
+
+          MLOGIN_PENDING=$(curl -s -w "|HTTP_%{http_code}" -X POST "$URL/api/marketer/login" -H "Content-Type: application/json" -d "{\"phone\":\"$MPHONE\",\"password\":\"pass1234\"}")
+          echo "Marketer login before approval (expect 403/ACCOUNT_NOT_ACTIVE): $MLOGIN_PENDING"
+
+          MID=$(echo "$MSIGNUP" | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{try{console.log(JSON.parse(d).marketer.id)}catch(e){console.log('')}})")
+          echo "New marketer id: $MID"
+
+          if [ -n "$MID" ]; then
+            ACTIVATE=$(curl -s -X PATCH "$URL/api/admin/marketers/$MID" -H "Content-Type: application/json" -H "X-Admin-Token: $ADMIN_TOKEN" -d '{"active":true}')
+            echo "Activate marketer: $ACTIVATE"
+
+            MLOGIN_OK=$(curl -s -X POST "$URL/api/marketer/login" -H "Content-Type: application/json" -d "{\"phone\":\"$MPHONE\",\"password\":\"pass1234\"}")
+            echo "Marketer login after approval: $MLOGIN_OK"
+
+            CPHONE="09140000$RANDOM"
+            NEWCUST=$(curl -s -X POST "$URL/api/marketer/$MID/customers" -H "Content-Type: application/json" -d "{\"firstName\":\"مشتری\",\"lastName\":\"تست\",\"phone\":\"$CPHONE\",\"storeName\":\"فروشگاه تست بازاریاب\",\"businessType\":\"pharmacy\",\"address\":\"تهران\"}")
+            echo "Marketer create customer: $NEWCUST"
+            CID=$(echo "$NEWCUST" | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{try{console.log(JSON.parse(d).customer.id)}catch(e){console.log('')}})")
+            echo "New customer id: $CID"
+
+            if [ -n "$CID" ]; then
+              NEWORDER=$(curl -s -X POST "$URL/api/orders" -H "Content-Type: application/json" -d "{\"customerId\":$CID,\"items\":[{\"product_id\":\"sb-test\",\"product_name\":\"محصول تست\",\"quantity\":1,\"unit_price\":100000,\"total_price\":100000}],\"initialAmount\":100000,\"discount\":0,\"finalAmount\":100000,\"customerNote\":\"تست\"}")
+              echo "Order via customer flow (should notify marketer): $NEWORDER"
+              OID=$(echo "$NEWORDER" | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{try{console.log(JSON.parse(d).orderId)}catch(e){console.log('')}})")
+
+              MORDERS=$(curl -s "$URL/api/marketer/$MID/orders")
+              MORDER_COUNT=$(echo "$MORDERS" | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{try{console.log(JSON.parse(d).orders.length)}catch(e){console.log('PARSE_ERROR')}})")
+              echo "Marketer sees orders count (expect >=1): $MORDER_COUNT"
+
+              if [ -n "$OID" ]; then
+                STATUSCHANGE=$(curl -s -X PATCH "$URL/api/orders/$OID/status" -H "Content-Type: application/json" -d '{"status":"confirmed","marketer_note":"تایید شد توسط تست خودکار"}')
+                echo "Marketer status update: $STATUSCHANGE"
+              fi
+
+              MNOTIFS=$(curl -s "$URL/api/marketer/$MID/notifications")
+              MNOTIF_COUNT=$(echo "$MNOTIFS" | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{try{console.log(JSON.parse(d).notifications.length)}catch(e){console.log('PARSE_ERROR')}})")
+              echo "Marketer notifications count (expect >=1): $MNOTIF_COUNT"
+
+              echo "::notice::MARKETER_SMOKE mid=$MID cid=$CID oid=$OID orders_count=$MORDER_COUNT notif_count=$MNOTIF_COUNT"
+            fi
+          fi
