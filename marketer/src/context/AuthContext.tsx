@@ -95,13 +95,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       // enters the app right away instead of having to log in separately.
       // The account is still inactive/pending at this point — the app will
       // show a locked screen (see PendingLockScreen) until an admin approves it.
-      try {
-        await login(data.phone, data.password);
+      // NOTE: login() never throws — it always resolves with {success, error?}
+      // — so its outcome must be checked explicitly here rather than relying
+      // on try/catch (a try/catch around it would never catch anything).
+      const loginResult = await login(data.phone, data.password);
+      if (loginResult.success) {
         setJustSignedUp(true);
-      } catch (loginErr) {
-        // Signup itself succeeded even if the immediate auto-login failed
-        // (e.g. transient network issue) — the user can still log in manually.
-        console.warn('Auto-login after signup failed', loginErr);
+      } else {
+        // Signup itself succeeded even if the immediate auto-login failed —
+        // the user can still log in manually with the phone/password they set.
+        console.warn('Auto-login after signup failed', loginResult.error);
       }
       return { success: true, message: res.message };
     } catch (err: unknown) {

@@ -83,6 +83,11 @@ export const SignupView: React.FC<SignupViewProps> = ({ onSwitchToLogin }) => {
     });
 
     if (result.success) {
+      // If auto-login succeeded, isAuthenticated flips to true and the
+      // parent App switches away from this screen automatically (to the
+      // pending-approval welcome popup). This success card is only ever
+      // seen as a fallback — when auto-login couldn't complete — so the
+      // user still has a way forward (manual login).
       setIsSuccess(true);
       setSuccessMessage(result.message || 'ثبت‌نام شما با موفقیت انجام شد. حساب شما پس از تایید مدیر سیستم فعال خواهد شد.');
     } else {
