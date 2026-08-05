@@ -17,7 +17,7 @@ jobs:
             -d "{\"phone\":\"$PHONE\",\"password\":\"pass123\"}")
           echo "::notice::LOGIN=$LOGIN"
           SESSION=$(echo "$LOGIN" | python3 -c "import json,sys; print(json.load(sys.stdin)['session'])")
-          UID=$(echo "$LOGIN" | python3 -c "import json,sys; print(json.load(sys.stdin)['adminUser']['id'])")
+          ADMIN_UID=$(echo "$LOGIN" | python3 -c "import json,sys; print(json.load(sys.stdin)['adminUser']['id'])")
 
           ME=$(curl -s "$BASE/api/admin/me" -H "X-Admin-Session: $SESSION")
           echo "::notice::ME=$ME"
@@ -28,7 +28,7 @@ jobs:
           LIST_WITH_TOKEN=$(curl -s "$BASE/api/admin/users" -H "X-Admin-Token: ${{ secrets.ADMIN_DASHBOARD_TOKEN }}")
           echo "::notice::LIST_LEN=$(echo "$LIST_WITH_TOKEN" | python3 -c "import json,sys; print(len(json.load(sys.stdin)['adminUsers']))")"
 
-          APPROVE=$(curl -s -X PATCH "$BASE/api/admin/users/$UID" -H "Content-Type: application/json" \
+          APPROVE=$(curl -s -X PATCH "$BASE/api/admin/users/$ADMIN_UID" -H "Content-Type: application/json" \
             -H "X-Admin-Token: ${{ secrets.ADMIN_DASHBOARD_TOKEN }}" -d '{"role":"مدیر فروش"}')
           echo "::notice::APPROVE=$APPROVE"
 
