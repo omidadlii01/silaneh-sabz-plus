@@ -1,5 +1,6 @@
 import React from 'react';
 import { Brand } from '../types';
+import { handleImgError } from '../utils/image';
 
 interface BrandsGridProps {
   brands: Brand[];
@@ -36,24 +37,25 @@ export const BrandsGrid: React.FC<BrandsGridProps> = ({
       </div>
 
       {/* Grid */}
-      <div className="grid grid-cols-4 gap-2.5">
+      <div className="grid grid-cols-4 gap-2.5 auto-rows-fr">
         {brands.map((brand: Brand) => {
           const isSelected = selectedBrand === brand.nameFa;
           return (
             <div
               key={brand.id}
               onClick={() => onSelectBrand(brand.nameFa)}
-              className={`bg-white border rounded-2xl p-2 flex flex-col items-center text-center cursor-pointer active:scale-95 transition-all shadow-xs ${
+              className={`h-full bg-white border rounded-2xl p-2 flex flex-col items-center text-center cursor-pointer active:scale-95 transition-all shadow-xs ${
                 isSelected
                   ? 'border-[#006c4a] bg-[#82f5c1]/10 ring-2 ring-[#006c4a]/30 scale-105'
                   : 'border-[#bec9c2]/30 hover:border-[#006c4a]/40 hover:bg-[#f6fafe]'
               }`}
             >
-              <div className="aspect-square w-full p-1.5 flex items-center justify-center">
+              <div className="aspect-square w-full p-1.5 flex items-center justify-center overflow-hidden shrink-0">
                 <img
                   src={brand.logo}
                   alt={brand.nameFa}
-                  className="w-full h-full object-contain"
+                  onError={handleImgError}
+                  className="max-w-full max-h-full w-auto h-auto object-contain"
                   loading="lazy"
                 />
               </div>

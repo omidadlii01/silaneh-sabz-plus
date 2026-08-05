@@ -1,13 +1,8 @@
 import React from 'react';
 import { toPersianDigits } from '../utils/persian';
-import { assetUrl } from '../utils/assets';
+import logoImg from '../assets/logo-header-new.png';
 
-// Real app logo (already deployed under /public), replacing the AI Studio
-// placeholder googleusercontent URL. Resolved through assetUrl() because
-// the app is deployed under a GitHub Pages subpath — a plain '/logo-full.png'
-// string resolves against the domain root, not the app's base path, and
-// renders as a broken image.
-const LOGO_URL = assetUrl('/logo-full.png');
+const LOGO_URL = logoImg;
 
 interface HeaderProps {
   onOpenNotifications: () => void;

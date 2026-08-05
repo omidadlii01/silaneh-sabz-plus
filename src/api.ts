@@ -8,6 +8,7 @@ import {
   UserProfileData,
 } from './types';
 import { assetUrl } from './utils/assets';
+import { IMAGE_FALLBACK } from './utils/image';
 
 const API_BASE_URL = 'https://silaneh-sabz-api.omidadli78.workers.dev';
 
@@ -233,8 +234,26 @@ export async function apiGetProducts(brands: Brand[]): Promise<Product[]> {
 }
 
 // Categories don't have their own backend table — they're derived dynamically
-// from the distinct `category` string already present on each product, as
-// decided for this migration (no backend schema change).
+// from the distinct `category` string already present on each product.
+// Each of the 6 real category names gets its custom-designed icon (provided
+// by the user); any category outside this known set falls back to a
+// product photo so nothing renders broken if the backend's categories change.
+import skinBodyIcon from './assets/categories/skin-body.png';
+import beautyMakeupIcon from './assets/categories/beauty-makeup.png';
+import healthSafetyIcon from './assets/categories/health-safety.png';
+import babyCareIcon from './assets/categories/baby-care.png';
+import dentalCareIcon from './assets/categories/dental-care.png';
+import hairCareIcon from './assets/categories/hair-care.png';
+
+const CATEGORY_ICONS: Record<string, string> = {
+  'مراقبت پوست و بدن': skinBodyIcon,
+  'زیبایی و آرایش بانوان': beautyMakeupIcon,
+  'بهداشت و مراقبت‌های جنسی': healthSafetyIcon,
+  'مراقبت از کودک': babyCareIcon,
+  'بهداشت دهان و دندان': dentalCareIcon,
+  'مراقبت مو': hairCareIcon,
+};
+
 export function deriveCategories(products: Product[]): Category[] {
   const seen = new Map<string, Category>();
   for (const p of products) {
@@ -242,7 +261,7 @@ export function deriveCategories(products: Product[]): Category[] {
     seen.set(p.categoryId, {
       id: p.categoryId,
       name: p.category,
-      image: p.image || '',
+      image: CATEGORY_ICONS[p.category] || p.image || IMAGE_FALLBACK,
     });
   }
   return Array.from(seen.values());

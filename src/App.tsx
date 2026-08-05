@@ -169,7 +169,7 @@ export default function App() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isSearchOverlayOpen, setIsSearchOverlayOpen] = useState(false);
-  const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [isAuthOpen, setIsAuthOpen] = useState(() => !loadSession());
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
 
   const handleLoginSuccess = (loggedInCustomer: Customer) => {
@@ -363,17 +363,16 @@ export default function App() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#0f5338]">
         <div className="flex flex-col items-center gap-4">
-          <div className="relative w-32 h-32 flex items-center justify-center">
+          <div className="relative w-44 h-44 flex items-center justify-center">
             <div className="absolute inset-0 rounded-full border-[3px] border-white/15 border-t-[#34d399] animate-spin" />
-            <div className="w-[100px] h-[100px] rounded-full bg-white flex items-center justify-center shadow-[0_4px_18px_rgba(0,0,0,0.25)] overflow-hidden">
+            <div className="w-[140px] h-[140px] rounded-full bg-white flex items-center justify-center shadow-[0_4px_18px_rgba(0,0,0,0.25)] overflow-hidden">
               <img
                 src={assetUrl('/splash-mark.png')}
                 alt="سیلانه سبز"
-                className="w-[68%] h-[68%] object-contain"
+                className="w-[78%] h-[78%] object-contain"
               />
             </div>
           </div>
-          <span className="text-white font-bold text-[13px]">در حال بارگذاری فروشگاه...</span>
         </div>
       </div>
     );
