@@ -53,6 +53,7 @@ jobs:
         working-directory: ./marketer
         env:
           BASE_PATH: /${{ github.event.repository.name }}/marketer/
+          VITE_API_BASE_URL: https://silaneh-sabz-api.omidadli78.workers.dev
 
       - name: Merge admin build into main dist
         run: |
