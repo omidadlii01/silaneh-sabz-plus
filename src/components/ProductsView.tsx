@@ -67,7 +67,10 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
         id: 'brand',
         nameFa: selectedBrand,
         nameEn: selectedBrand,
-        logo: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCnoGdr_jgRx_cnMrUSVASETue34DIKZJaOiHe384qiX-GO9hx_TAYZu8BoDWQaUgFmbigDxBoH_0NULeyxoA2EhCGpmm_d8OqTvr1_7CgSNIB2cInRVQ1-Asv_j4xQn-yTTlwTbzXHeFTqVl6LFo5eUmbuChZDzOGh2tdQVhY_rzJjaHNhmWd6RcI7fjg4aB5odZTwYKZkBAmXJfQtVpppUbU3OuKAS2mfvJl3c200aKptz9B1qFx_vcVOpdG6-ZE_VQ',
+        // Was an ephemeral aistudio.google.com googleusercontent URL that no
+        // longer resolves; replaced with the app's own brand logo asset
+        // (same one already used in Header) for this "official products" tile.
+        logo: '/logo-full.png',
         gradient: 'from-[#004e39] via-[#059669] to-[#0284c7]',
         description: 'محصولات رسمی تولیدی گروه صنعتی سیلانه سبز',
       }

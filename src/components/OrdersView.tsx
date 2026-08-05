@@ -239,11 +239,11 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ orders, onReorder }) => 
                   <div className="flex items-center gap-3">
                     {/* Store Logo Avatar */}
                     <div className="w-11 h-11 rounded-full bg-[#f8fafc] border border-[#e2e8f0] p-1 shrink-0 flex items-center justify-center overflow-hidden shadow-2xs">
+                      {/* Fallback was an ephemeral aistudio.google.com googleusercontent
+                          URL that no longer resolves; use the app's own brand logo
+                          instead when an order has no specific store logo. */}
                       <img
-                        src={
-                          order.storeLogo ||
-                          'https://lh3.googleusercontent.com/aida-public/AB6AXuCnoGdr_jgRx_cnMrUSVASETue34DIKZJaOiHe384qiX-GO9hx_TAYZu8BoDWQaUgFmbigDxBoH_0NULeyxoA2EhCGpmm_d8OqTvr1_7CgSNIB2cInRVQ1-Asv_j4xQn-yTTlwTbzXHeFTqVl6LFo5eUmbuChZDzOGh2tdQVhY_rzJjaHNhmWd6RcI7fjg4aB5odZTwYKZkBAmXJfQtVpppUbU3OuKAS2mfvJl3c200aKptz9B1qFx_vcVOpdG6-ZE_VQ'
-                        }
+                        src={order.storeLogo || '/logo-full.png'}
                         alt="Store"
                         className="max-w-full max-h-full object-contain"
                       />
@@ -678,7 +678,10 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ orders, onReorder }) => 
                   {/* Brand Logos Stack */}
                   <div className="flex -space-x-2 space-x-reverse">
                     <div className="w-9 h-9 rounded-full bg-white border-2 border-[#059669] p-0.5 shadow-xs overflow-hidden flex items-center justify-center">
-                      <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuCnoGdr_jgRx_cnMrUSVASETue34DIKZJaOiHe384qiX-GO9hx_TAYZu8BoDWQaUgFmbigDxBoH_0NULeyxoA2EhCGpmm_d8OqTvr1_7CgSNIB2cInRVQ1-Asv_j4xQn-yTTlwTbzXHeFTqVl6LFo5eUmbuChZDzOGh2tdQVhY_rzJjaHNhmWd6RcI7fjg4aB5odZTwYKZkBAmXJfQtVpppUbU3OuKAS2mfvJl3c200aKptz9B1qFx_vcVOpdG6-ZE_VQ" alt="Brand" className="max-w-full max-h-full object-contain" />
+                      {/* Was an ephemeral aistudio.google.com googleusercontent URL that no
+                          longer resolves; the app's own brand logo (already used in Header)
+                          is what this was always meant to represent. */}
+                      <img src="/logo-full.png" alt="سیلانه سبز" className="max-w-full max-h-full object-contain" />
                     </div>
                   </div>
                 </div>
