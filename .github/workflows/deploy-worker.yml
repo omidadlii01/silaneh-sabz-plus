@@ -187,3 +187,14 @@ jobs:
           MNOTIF_COUNT=$(echo "$MNOTIFS" | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{try{console.log(JSON.parse(d).notifications.length)}catch(e){console.log('PARSE_ERROR:'+d.slice(0,200))}})")
 
           echo "::notice::MARKETER_SMOKE_FINAL statuschange=$STATUSCHANGE notif_count=$MNOTIF_COUNT summary mid=$MID cid=$CID oid=$OID orders_count=$MORDER_COUNT"
+
+          # --- CROSS-APP CHECK: verify a marketer-created customer/order is actually
+          #     visible through the CUSTOMER app's own endpoints (this is the exact
+          #     path the customer app uses; regressions here are otherwise invisible
+          #     to the marketer-only smoke test above) ---
+          CUSTLOGIN=$(curl -s -X POST "$URL/api/login" -H "Content-Type: application/json" -d "{\"phone\":\"$CPHONE\"}")
+          CUSTORDERS=$(curl -s "$URL/api/customers/$CID/orders")
+          CUSTORDER_COUNT=$(echo "$CUSTORDERS" | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{try{console.log(JSON.parse(d).orders.length)}catch(e){console.log('PARSE_ERROR:'+d.slice(0,200))}})")
+          CUSTORDER_HAS_OID=$(echo "$CUSTORDERS" | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{try{console.log(JSON.parse(d).orders.some(o=>String(o.id)===String($OID)))}catch(e){console.log('PARSE_ERROR')}})")
+
+          echo "::notice::CROSS_APP_VISIBILITY_CHECK customer_login=$CUSTLOGIN customer_orders_count=$CUSTORDER_COUNT contains_marketer_order=$CUSTORDER_HAS_OID"
