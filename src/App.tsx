@@ -277,8 +277,13 @@ export default function App() {
     }
   };
 
+  // The 4th seeded weekly_offer (id 'wo-recommended-01') is the single
+  // "RecommendedPackage" box; the rest rotate in the WeeklyOffer carousel.
+  const recommendedOffer = weeklyOffers.find((o) => o.id === 'wo-recommended-01') || null;
+  const carouselOffers = weeklyOffers.filter((o) => o.id !== 'wo-recommended-01');
+
   const handleAddPackageToCart = () => {
-    if (weeklyOffers[0]) addBundleToCart(weeklyOffers[0]);
+    if (recommendedOffer) addBundleToCart(recommendedOffer);
   };
 
   const handleAddWeeklyOfferToCart = () => {
@@ -468,9 +473,9 @@ export default function App() {
                 onViewAllBrands={() => handleOpenProductsTab()}
               />
 
-              {weeklyOffers.length > 0 && (
+              {carouselOffers.length > 0 && (
                 <WeeklyOffer
-                  offers={weeklyOffers}
+                  offers={carouselOffers}
                   onOpenOfferModal={(slide) => {
                     setSelectedOfferSlide(slide);
                     setIsOfferModalOpen(true);
@@ -478,10 +483,10 @@ export default function App() {
                 />
               )}
 
-              {weeklyOffers[0] && (
+              {recommendedOffer && (
                 <RecommendedPackage
-                  pkg={weeklyOffers[0]}
-                  onOpenPackageDetails={() => setSelectedPackage(weeklyOffers[0])}
+                  pkg={recommendedOffer}
+                  onOpenPackageDetails={() => setSelectedPackage(recommendedOffer)}
                   onAddPackageToCart={handleAddPackageToCart}
                 />
               )}
