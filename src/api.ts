@@ -113,7 +113,7 @@ export function customerToVisitorInfo(c: Customer): VisitorInfo | null {
     code: '',
     phone: c.marketerPhone || '',
     region: '',
-    avatar: '',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + encodeURIComponent(c.marketerName),
     rating: 5,
     status: 'online',
   };
