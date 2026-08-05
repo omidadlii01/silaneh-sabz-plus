@@ -45,9 +45,10 @@ function genSessionToken(): string {
 async function getSessionAdminUser(request: Request, env: Env): Promise<any | null> {
   const session = request.headers.get('X-Admin-Session');
   if (!session) return null;
-  const user = await env.DB.prepare(
-    `SELECT * FROM admin_users WHERE session_token = ? AND status = 'active'`,
-  )
+  // Any admin_users row with a matching session token is a valid session —
+  // including 'pending' users (they can log in but see only /reports, a
+  // restriction enforced by the manager app's own role-based nav/routing).
+  const user = await env.DB.prepare(`SELECT * FROM admin_users WHERE session_token = ?`)
     .bind(session)
     .first<any>();
   return user || null;
@@ -735,6 +736,16 @@ export default {
       }
 
       // --- MANAGER APP: LIST / APPROVE / REJECT admin users (مدیرکل only) ---
+      const isAdminUsersMgmtPath = path === '/api/admin/users' || /^\/api\/admin\/users\/\d+$/.test(path);
+      if (isAdminUsersMgmtPath) {
+        if (!isAuthorized(request, env)) {
+          const sessionUser = await getSessionAdminUser(request, env);
+          if (!sessionUser || sessionUser.role !== 'مدیرکل') {
+            return json({ error: 'فقط مدیرکل به این بخش دسترسی دارد.' }, 403);
+          }
+        }
+      }
+
       if (path === '/api/admin/users' && method === 'GET') {
         const rows = await env.DB.prepare('SELECT * FROM admin_users ORDER BY id DESC').all();
         return json({ adminUsers: (rows.results as any[]).map(adminUserToJson) });
