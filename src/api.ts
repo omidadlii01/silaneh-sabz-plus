@@ -7,6 +7,7 @@ import {
   VisitorInfo,
   UserProfileData,
 } from './types';
+import { assetUrl } from './utils/assets';
 
 const API_BASE_URL = 'https://silaneh-sabz-api.omidadli78.workers.dev';
 
@@ -183,7 +184,10 @@ function mapProduct(p: ApiProduct, brandEnByName: Record<string, string>): Produ
     brandEn: brandEnByName[p.brand] || '',
     category: p.category,
     categoryId: slugify(p.category || 'سایر'),
-    image: p.imageUrl || '',
+    // assetUrl() is a no-op for the absolute raw.githubusercontent.com URLs
+    // already stored for products, but fixes any local '/...' path (and
+    // accounts for the GitHub Pages subpath the app is deployed under).
+    image: assetUrl(p.imageUrl || ''),
     cartonCount: p.cartonQuantity ?? 1,
     price: p.price ?? 0,
     consumerPrice: p.unitPrice ?? 0,
@@ -208,7 +212,10 @@ function mapBrand(b: ApiBrand): Brand {
     id: b.id,
     nameFa: b.name,
     nameEn: b.englishName || '',
-    logo: b.imageUrl || '',
+    // Brand logos are stored as local root-relative paths (e.g. '/brands/kodex.png');
+    // assetUrl() resolves them against the app's actual base path so they load
+    // correctly under the GitHub Pages subpath deployment.
+    logo: assetUrl(b.imageUrl || ''),
     gradient: b.logoColor || '',
   };
 }

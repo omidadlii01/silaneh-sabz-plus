@@ -14,6 +14,7 @@ import {
   clearSession,
   Customer,
 } from './api';
+import { assetUrl } from './utils/assets';
 import { Header } from './components/Header';
 import { SearchBar } from './components/SearchBar';
 import { CategoryGrid } from './components/CategoryGrid';
@@ -353,11 +354,26 @@ export default function App() {
   }));
 
   if (isCatalogLoading && products.length === 0) {
+    // Matches the original branded splash screen (index.html's #app-splash,
+    // shown for the very first paint): dark green background, white circle
+    // with the brand mark, and a spinning green ring around it. Previously
+    // this state showed a generic thin grey/green spinner instead, because
+    // main.tsx removes #app-splash as soon as React mounts — before the
+    // catalog has actually finished loading from the API.
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#f6fafe]">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 border-4 border-[#006c4a]/20 border-t-[#006c4a] rounded-full animate-spin" />
-          <span className="text-[#006c4a] font-bold text-[13px]">در حال بارگذاری فروشگاه...</span>
+      <div className="min-h-screen flex items-center justify-center bg-[#0f5338]">
+        <div className="flex flex-col items-center gap-4">
+          <div className="relative w-32 h-32 flex items-center justify-center">
+            <div className="absolute inset-0 rounded-full border-[3px] border-white/15 border-t-[#34d399] animate-spin" />
+            <div className="w-[100px] h-[100px] rounded-full bg-white flex items-center justify-center shadow-[0_4px_18px_rgba(0,0,0,0.25)] overflow-hidden">
+              <img
+                src={assetUrl('/splash-mark.png')}
+                alt="سیلانه سبز"
+                className="w-[68%] h-[68%] object-contain"
+              />
+            </div>
+          </div>
+          <span className="text-white font-bold text-[13px]">در حال بارگذاری فروشگاه...</span>
         </div>
       </div>
     );

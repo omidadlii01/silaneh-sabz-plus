@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Product, Category, Brand } from '../types';
 import { toPersianDigits } from '../utils/persian';
+import { assetUrl } from '../utils/assets';
 import { ProductCard } from './ProductCard';
 import { ProductRowCard } from './ProductRowCard';
 
@@ -70,7 +71,8 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
         // Was an ephemeral aistudio.google.com googleusercontent URL that no
         // longer resolves; replaced with the app's own brand logo asset
         // (same one already used in Header) for this "official products" tile.
-        logo: '/logo-full.png',
+        // assetUrl() accounts for the GitHub Pages subpath deployment.
+        logo: assetUrl('/logo-full.png'),
         gradient: 'from-[#004e39] via-[#059669] to-[#0284c7]',
         description: 'محصولات رسمی تولیدی گروه صنعتی سیلانه سبز',
       }

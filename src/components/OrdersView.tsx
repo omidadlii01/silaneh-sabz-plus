@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Order } from '../types';
 import { formatPrice, toPersianDigits } from '../utils/persian';
+import { assetUrl } from '../utils/assets';
 
 interface OrdersViewProps {
   orders: Order[];
@@ -241,9 +242,10 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ orders, onReorder }) => 
                     <div className="w-11 h-11 rounded-full bg-[#f8fafc] border border-[#e2e8f0] p-1 shrink-0 flex items-center justify-center overflow-hidden shadow-2xs">
                       {/* Fallback was an ephemeral aistudio.google.com googleusercontent
                           URL that no longer resolves; use the app's own brand logo
-                          instead when an order has no specific store logo. */}
+                          instead when an order has no specific store logo. assetUrl()
+                          accounts for the GitHub Pages subpath deployment. */}
                       <img
-                        src={order.storeLogo || '/logo-full.png'}
+                        src={order.storeLogo || assetUrl('/logo-full.png')}
                         alt="Store"
                         className="max-w-full max-h-full object-contain"
                       />
@@ -680,8 +682,9 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ orders, onReorder }) => 
                     <div className="w-9 h-9 rounded-full bg-white border-2 border-[#059669] p-0.5 shadow-xs overflow-hidden flex items-center justify-center">
                       {/* Was an ephemeral aistudio.google.com googleusercontent URL that no
                           longer resolves; the app's own brand logo (already used in Header)
-                          is what this was always meant to represent. */}
-                      <img src="/logo-full.png" alt="سیلانه سبز" className="max-w-full max-h-full object-contain" />
+                          is what this was always meant to represent. assetUrl() accounts for
+                          the GitHub Pages subpath deployment. */}
+                      <img src={assetUrl('/logo-full.png')} alt="سیلانه سبز" className="max-w-full max-h-full object-contain" />
                     </div>
                   </div>
                 </div>
