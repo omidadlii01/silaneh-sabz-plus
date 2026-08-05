@@ -12,6 +12,21 @@ export const ReportsPage: React.FC = () => {
   const rankedMarketers = [...marketers].sort((a, b) => b.achieved_sales - a.achieved_sales);
 
   const handleExport = () => {
+    const headers = ['رتبه', 'کد پرسنلی', 'نام بازاریاب', 'منطقه', 'تارگت ماهانه', 'فروش محقق‌شده', 'درصد تحقق'];
+    const rows = rankedMarketers.map((m, idx) => {
+      const percent = m.monthly_target > 0 ? Math.round((m.achieved_sales / m.monthly_target) * 100) : 0;
+      return [idx + 1, m.personnel_code, `${m.first_name} ${m.last_name}`, m.region, m.monthly_target, m.achieved_sales, percent];
+    });
+    const csv = '\uFEFF' + [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `گزارش-بازاریابان-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
     setExportedNotice(true);
     setTimeout(() => setExportedNotice(false), 3000);
   };
@@ -138,6 +153,48 @@ export const ReportsPage: React.FC = () => {
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* Comparative Bar Chart */}
+      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-6">
+        <h2 className="text-sm font-bold text-[#171c1f] flex items-center gap-2 mb-5">
+          <TrendingUp className="w-4 h-4 text-[#006c4a]" />
+          <span>نمودار مقایسه‌ای فروش محقق‌شده در برابر تارگت</span>
+        </h2>
+
+        {rankedMarketers.length === 0 ? (
+          <p className="text-xs text-slate-500 text-center py-6">هنوز بازاریابی ثبت نشده است.</p>
+        ) : (
+          <div className="space-y-3.5">
+            {rankedMarketers.map((m) => {
+              const maxVal = Math.max(...rankedMarketers.map(x => Math.max(x.achieved_sales, x.monthly_target)), 1);
+              const achievedPct = Math.min((m.achieved_sales / maxVal) * 100, 100);
+              const targetPct = Math.min((m.monthly_target / maxVal) * 100, 100);
+              return (
+                <div key={m.id} className="text-xs">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="font-bold text-slate-700">{m.first_name} {m.last_name}</span>
+                    <span className="text-slate-500 font-mono">{m.achieved_sales.toLocaleString('fa-IR')} / {m.monthly_target.toLocaleString('fa-IR')}</span>
+                  </div>
+                  <div className="relative h-4 bg-slate-100 rounded-lg overflow-hidden">
+                    <div
+                      className="absolute inset-y-0 right-0 border-l-2 border-dashed border-slate-400"
+                      style={{ width: `${targetPct}%` }}
+                    />
+                    <div
+                      className="absolute inset-y-0 right-0 bg-[#006c4a] rounded-lg transition-all"
+                      style={{ width: `${achievedPct}%` }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+            <div className="flex items-center gap-4 text-[10px] text-slate-500 pt-2">
+              <span className="flex items-center gap-1"><span className="w-3 h-2.5 bg-[#006c4a] rounded-sm inline-block" /> فروش محقق‌شده</span>
+              <span className="flex items-center gap-1"><span className="w-3 h-2.5 border-l-2 border-dashed border-slate-400 inline-block" /> خط تارگت</span>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Regional Share Cards */}
