@@ -1,0 +1,35 @@
+name: TEMP Diagnostic Query
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    env:
+      ADMIN_TOKEN: ${{ secrets.ADMIN_DASHBOARD_TOKEN }}
+    steps:
+      - name: Query admin customers + orders for the test phone
+        run: |
+          set +e
+          URL="https://silaneh-sabz-api.omidadli78.workers.dev"
+
+          ALLCUST=$(curl -s "$URL/api/admin/customers" -H "X-Admin-Token: $ADMIN_TOKEN")
+          MATCH=$(echo "$ALLCUST" | node -e "
+            let d='';process.stdin.on('data',c=>d+=c);
+            process.stdin.on('end',()=>{
+              try{
+                const j = JSON.parse(d);
+                const list = j.customers || j;
+                const found = list.filter(c => (c.phone||'').includes('09933773515') || (c.first_name==='امید' || c.firstName==='امید'));
+                console.log(JSON.stringify(found));
+              }catch(e){console.log('PARSE_ERROR:'+d.slice(0,300))}
+            })
+          ")
+          echo "::notice::DIAG_CUSTOMER_MATCH count_total=$(echo "$ALLCUST" | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{try{const j=JSON.parse(d);console.log((j.customers||j).length)}catch(e){console.log('ERR')}})") match=$MATCH"
+
+          ALLORD=$(curl -s "$URL/api/admin/orders" -H "X-Admin-Token: $ADMIN_TOKEN")
+          echo "::notice::DIAG_ORDERS_COUNT count=$(echo "$ALLORD" | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{try{const j=JSON.parse(d);console.log((j.orders||j).length)}catch(e){console.log('ERR:'+d.slice(0,200))}})")"
+
+          ALLMARK=$(curl -s "$URL/api/admin/marketers" -H "X-Admin-Token: $ADMIN_TOKEN")
+          echo "::notice::DIAG_MARKETERS list=$ALLMARK"
