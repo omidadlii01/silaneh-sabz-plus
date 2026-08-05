@@ -5,6 +5,7 @@ import {
   Package,
   Tags,
   Users,
+  UserCheck,
   Settings as SettingsIcon,
   LogOut,
   Menu,
@@ -17,9 +18,10 @@ import Orders from './pages/Orders';
 import Products from './pages/Products';
 import Brands from './pages/Brands';
 import Customers from './pages/Customers';
+import Marketers from './pages/Marketers';
 import Settings from './pages/Settings';
 
-type Tab = 'dashboard' | 'orders' | 'products' | 'brands' | 'customers' | 'settings';
+type Tab = 'dashboard' | 'orders' | 'products' | 'brands' | 'customers' | 'marketers' | 'settings';
 
 const NAV: { id: Tab; label: string; icon: any }[] = [
   { id: 'dashboard', label: 'داشبورد', icon: LayoutDashboard },
@@ -27,6 +29,7 @@ const NAV: { id: Tab; label: string; icon: any }[] = [
   { id: 'products', label: 'محصولات', icon: Package },
   { id: 'brands', label: 'برندها', icon: Tags },
   { id: 'customers', label: 'مشتری‌ها', icon: Users },
+  { id: 'marketers', label: 'بازاریاب‌ها', icon: UserCheck },
   { id: 'settings', label: 'تنظیمات اپ', icon: SettingsIcon },
 ];
 
@@ -116,6 +119,7 @@ export default function App() {
           {tab === 'products' && <Products />}
           {tab === 'brands' && <Brands />}
           {tab === 'customers' && <Customers />}
+          {tab === 'marketers' && <Marketers />}
           {tab === 'settings' && <Settings />}
         </main>
       </div>

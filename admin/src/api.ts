@@ -58,4 +58,8 @@ export const api = {
   settings: () => request<{ settings: Record<string, string> }>('/api/settings'),
   updateSettings: (settings: Record<string, string>) =>
     request<{ settings: Record<string, string> }>('/api/settings', { method: 'PUT', body: JSON.stringify(settings) }),
+
+  marketers: () => request<{ marketers: any[] }>('/api/admin/marketers'),
+  setMarketerActive: (id: number | string, active: boolean) =>
+    request(`/api/admin/marketers/${id}`, { method: 'PATCH', body: JSON.stringify({ active }) }),
 };
