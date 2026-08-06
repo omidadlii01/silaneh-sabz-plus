@@ -22,7 +22,7 @@ const REGION_OPTIONS = [
 ];
 
 export const SignupView: React.FC<SignupViewProps> = ({ onSwitchToLogin }) => {
-  const { signup, isLoading } = useAuth();
+  const { signup, isAuthLoading } = useAuth();
 
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -255,11 +255,11 @@ export const SignupView: React.FC<SignupViewProps> = ({ onSwitchToLogin }) => {
             <button
               type="submit"
               id="btn-signup-submit"
-              disabled={isLoading}
+              disabled={isAuthLoading}
               className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white text-xs font-bold rounded-xl shadow-lg shadow-emerald-600/25 flex items-center justify-center gap-2 transition-all mt-2"
             >
               <UserPlus className="w-4 h-4" />
-              <span>{isLoading ? 'در حال ثبت اطلاعات...' : 'ثبت‌نام در سامانه بازاریاب‌ها'}</span>
+              <span>{isAuthLoading ? 'در حال ثبت اطلاعات...' : 'ثبت‌نام در سامانه بازاریاب‌ها'}</span>
             </button>
           </form>
         )}

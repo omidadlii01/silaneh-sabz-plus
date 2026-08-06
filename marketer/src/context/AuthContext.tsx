@@ -18,7 +18,10 @@ interface AuthContextType {
   marketer: Marketer | null;
   token: string | null;
   isAuthenticated: boolean;
+  /** True only while the app is restoring a saved session on first load. */
   isLoading: boolean;
+  /** True only while a login/signup submission is in flight. */
+  isAuthLoading: boolean;
   apiBaseUrl: string;
   justSignedUp: boolean;
   clearJustSignedUp: () => void;
@@ -37,6 +40,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [marketer, setMarketer] = useState<Marketer | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isAuthLoading, setIsAuthLoading] = useState(false);
   const [apiBaseUrl, setApiBaseUrlState] = useState<string>(apiService.getBaseUrl());
   const [justSignedUp, setJustSignedUp] = useState(false);
 
@@ -65,7 +69,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   const login = async (phone: string, password?: string): Promise<LoginResult> => {
-    setIsLoading(true);
+    setIsAuthLoading(true);
     try {
       const res = await apiService.loginMarketer(phone, password);
       const { password: _p, ...safeMarketer } = res.marketer as unknown as { password?: unknown; [key: string]: unknown };
@@ -83,12 +87,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         code: errObj?.code || 'LOGIN_FAILED',
       };
     } finally {
-      setIsLoading(false);
+      setIsAuthLoading(false);
     }
   };
 
   const signup = async (data: MarketerSignupData): Promise<SignupResult> => {
-    setIsLoading(true);
+    setIsAuthLoading(true);
     try {
       const res = await apiService.signupMarketer(data);
       // Auto-login immediately after a successful signup so the marketer
@@ -115,7 +119,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         error: errObj?.message || 'ثبت‌نام با خطا مواجه شد. لطفاً مجدداً تلاش نمایید.',
       };
     } finally {
-      setIsLoading(false);
+      setIsAuthLoading(false);
     }
   };
 
@@ -148,6 +152,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         token,
         isAuthenticated: !!marketer,
         isLoading,
+        isAuthLoading,
         apiBaseUrl,
         justSignedUp,
         clearJustSignedUp,

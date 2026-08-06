@@ -8,7 +8,7 @@ interface LoginViewProps {
 }
 
 export const LoginView: React.FC<LoginViewProps> = ({ onSwitchToSignup }) => {
-  const { login, isLoading } = useAuth();
+  const { login, isAuthLoading } = useAuth();
 
   const [phone, setPhone] = useState('09123456789');
   const [password, setPassword] = useState('123456');
@@ -138,11 +138,11 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSwitchToSignup }) => {
           <button
             type="submit"
             id="btn-login-submit"
-            disabled={isLoading}
+            disabled={isAuthLoading}
             className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white text-xs font-bold rounded-xl shadow-lg shadow-emerald-600/25 flex items-center justify-center gap-2 transition-all"
           >
             <LogIn className="w-4 h-4" />
-            <span>{isLoading ? 'در حال احراز هویت...' : 'ورود به پنل بازاریاب'}</span>
+            <span>{isAuthLoading ? 'در حال احراز هویت...' : 'ورود به پنل بازاریاب'}</span>
           </button>
         </form>
 
