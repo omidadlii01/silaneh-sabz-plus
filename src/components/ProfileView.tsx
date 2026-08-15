@@ -34,7 +34,10 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ profile, onUpdateProfi
   };
 
   return (
-    <div className="pb-24 pt-4 px-4 text-right space-y-3.5">
+    <div
+      className="pt-4 px-4 text-right space-y-3.5"
+      style={{ paddingBottom: 'calc(6rem + env(safe-area-inset-bottom))' }}
+    >
       {/* Profile Card Header */}
       <div className="bg-white border border-[#bec9c2]/40 rounded-2xl p-4 shadow-xs">
         <div className="flex items-center justify-between mb-3 border-b border-[#f1f5f9] pb-3">

@@ -135,7 +135,13 @@ export const AuthView: React.FC<AuthViewProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#002e21] flex flex-col items-center justify-between p-4 overflow-y-auto selection:bg-[#34d399] selection:text-[#002e21] text-right font-['Vazirmatn']">
+    <div
+      className="fixed inset-0 z-50 bg-[#002e21] flex flex-col items-center justify-between px-4 overflow-y-auto selection:bg-[#34d399] selection:text-[#002e21] text-right font-['Vazirmatn']"
+      style={{
+        paddingTop: 'calc(1rem + env(safe-area-inset-top))',
+        paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))',
+      }}
+    >
       {/* Background Decorative Gradient Light Spheres */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-lg h-96 bg-[radial-gradient(circle_at_center,rgba(5,150,105,0.25)_0,transparent_70%)] pointer-events-none" />
       <div className="absolute bottom-0 right-0 w-80 h-80 bg-[radial-gradient(circle_at_center,rgba(52,211,153,0.15)_0,transparent_70%)] pointer-events-none" />

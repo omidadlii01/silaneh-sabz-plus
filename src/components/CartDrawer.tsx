@@ -45,7 +45,10 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
     <div className="fixed inset-0 z-50 flex justify-center bg-black/50 backdrop-blur-xs animate-in fade-in duration-200">
       <div className="bg-white w-full max-w-[448px] h-full flex flex-col shadow-2xl text-right relative">
         {/* Header */}
-        <div className="bg-[#f6fafe] border-b border-[#e2e8f0] px-4 py-3 flex items-center justify-between">
+        <div
+          className="bg-[#f6fafe] border-b border-[#e2e8f0] px-4 pb-3 flex items-center justify-between"
+          style={{ paddingTop: 'calc(0.75rem + env(safe-area-inset-top))' }}
+        >
           <div className="flex items-center gap-2">
             <span className="material-symbols-outlined text-[#004532] text-[24px]">
               shopping_bag
@@ -132,7 +135,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                     alt={item.product.name}
                     className="w-16 h-16 object-contain rounded-lg border border-[#e2e8f0] p-1 bg-[#f8fafc] shrink-0"
                   />
-                  <div className="flex-1 flex flex-col">
+                  <div className="flex-1 flex flex-col min-w-0">
                     <span className="text-[13px] font-bold text-[#171c1f] leading-snug">
                       {item.product.name}
                     </span>
@@ -140,13 +143,13 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                       بسته {toPersianDigits(item.product.cartonCount)} تایی | فی هر عدد:{' '}
                       {formatPrice(item.product.price)} تومان
                     </span>
-                    <div className="flex items-center justify-between mt-2">
-                      <span className="text-[13px] font-black text-[#004532]">
+                    <div className="flex items-center justify-between mt-2 gap-1.5">
+                      <span className="text-[13px] font-black text-[#004532] break-words min-w-0">
                         {formatPrice(itemTotal)} تومان
                       </span>
 
                       {/* Qty controller */}
-                      <div className="flex items-center gap-1.5 bg-[#f0f4f8] rounded-lg p-1">
+                      <div className="flex items-center gap-1.5 bg-[#f0f4f8] rounded-lg p-1 shrink-0">
                         <button
                           onClick={() => onUpdateQty(item.product.id, 1)}
                           className="w-6 h-6 bg-[#004532] text-white rounded flex items-center justify-center font-bold text-[14px]"
@@ -179,7 +182,10 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
 
         {/* Footer & Invoice Breakdown */}
         {cartItems.length > 0 && (
-          <div className="bg-[#f6fafe] border-t border-[#e2e8f0] p-4 flex flex-col gap-2">
+          <div
+            className="bg-[#f6fafe] border-t border-[#e2e8f0] p-4 flex flex-col gap-2"
+            style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }}
+          >
             <div className="flex justify-between items-center text-[12px] text-[#6f7973]">
               <span>مبلغ کل محصولات (B2B):</span>
               <span className="font-bold text-[#171c1f]">{formatPrice(totalAmount)} تومان</span>

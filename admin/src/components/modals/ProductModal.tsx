@@ -19,6 +19,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({ product, onClose }) 
   const [price, setPrice] = useState<number>(product?.price || 10800000);
   const [cartonQuantity, setCartonQuantity] = useState<number>(product?.carton_quantity || 24);
   const [stockCount, setStockCount] = useState<number>(product?.stock_count || 1000);
+  const [description, setDescription] = useState<string>(product?.description || '');
   const [active, setActive] = useState<boolean>(product ? product.active : true);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -35,6 +36,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({ product, onClose }) 
         carton_quantity: Number(cartonQuantity),
         stock_count: Number(stockCount),
         in_stock: Number(stockCount) > 0,
+        description,
         active
       });
     } else {
@@ -48,6 +50,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({ product, onClose }) 
         carton_quantity: Number(cartonQuantity),
         stock_count: Number(stockCount),
         in_stock: Number(stockCount) > 0,
+        description,
         active
       });
     }
@@ -170,6 +173,17 @@ export const ProductModal: React.FC<ProductModalProps> = ({ product, onClose }) 
                 className="w-full p-2.5 bg-emerald-50 border border-emerald-300 rounded-lg font-bold text-[#006c4a]"
               />
             </div>
+          </div>
+
+          <div>
+            <label className="font-bold text-slate-700 block mb-1">توضیحات محصول (اختیاری):</label>
+            <textarea
+              value={description}
+              onChange={e => setDescription(e.target.value)}
+              placeholder="توضیح کوتاهی درباره محصول برای نمایش در صفحه محصول..."
+              rows={3}
+              className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg resize-none"
+            />
           </div>
 
           <div className="flex items-center gap-2 pt-2">

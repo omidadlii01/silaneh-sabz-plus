@@ -129,7 +129,10 @@ export const VisitorView: React.FC<VisitorViewProps> = ({ visitor }) => {
   };
 
   return (
-    <div className="pb-24 pt-4 px-4 text-right relative">
+    <div
+      className="pt-4 px-4 text-right relative"
+      style={{ paddingBottom: 'calc(6rem + env(safe-area-inset-bottom))' }}
+    >
       {/* Download Toast Notification */}
       {downloadToast && (
         <div className="fixed top-4 left-4 right-4 z-50 bg-[#004532] text-white p-3.5 rounded-2xl shadow-xl border border-[#059669] flex items-center justify-between text-[12.5px] font-black animate-in slide-in-from-top duration-300">

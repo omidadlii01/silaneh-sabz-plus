@@ -175,7 +175,10 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({ isOpen, 
   return (
     <div className="fixed inset-0 z-50 bg-white max-w-[448px] mx-auto flex flex-col h-full animate-in fade-in duration-200 text-right overflow-hidden border-x border-[#e2e8f0]/60">
       {/* Top Header */}
-      <div className="p-3.5 bg-white border-b border-[#e2e8f0]/80 flex items-center justify-between sticky top-0 z-10 shadow-2xs">
+      <div
+        className="p-3.5 bg-white border-b border-[#e2e8f0]/80 flex items-center justify-between sticky top-0 z-10 shadow-2xs"
+        style={{ paddingTop: 'calc(0.875rem + env(safe-area-inset-top))' }}
+      >
         <div className="flex items-center gap-2.5">
           <button
             onClick={onClose}
@@ -206,7 +209,10 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({ isOpen, 
       </div>
 
       {/* Horizontal Tabs Navigation with Dynamic Left/Right Scroll Arrows */}
-      <div className="bg-[#f8fafc] border-b border-[#e2e8f0] py-2.5 sticky top-[61px] z-10 relative group">
+      <div
+        className="bg-[#f8fafc] border-b border-[#e2e8f0] py-2.5 sticky z-10 relative group"
+        style={{ top: 'calc(61px + env(safe-area-inset-top))' }}
+      >
         {/* Right Scroll Arrow Button (shown when scrolled left) */}
         {canScrollRight && (
           <div className="absolute right-0 top-0 bottom-0 flex items-center pr-2 pl-4 bg-gradient-to-l from-[#f8fafc] via-[#f8fafc]/80 to-transparent z-10 animate-in fade-in duration-200">
@@ -274,7 +280,10 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({ isOpen, 
       </div>
 
       {/* Notifications Content Area */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 pb-20 bg-[#f8fafc]">
+      <div
+        className="flex-1 overflow-y-auto px-4 py-4 space-y-3 bg-[#f8fafc]"
+        style={{ paddingBottom: 'calc(5rem + env(safe-area-inset-bottom))' }}
+      >
         {filteredNotifications.length > 0 ? (
           filteredNotifications.map((n) => (
             <div

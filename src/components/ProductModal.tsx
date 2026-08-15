@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Product } from '../types';
 import { formatPrice, toPersianDigits } from '../utils/persian';
 
@@ -16,8 +16,17 @@ export const ProductModal: React.FC<ProductModalProps> = ({
   currentCartQty,
 }) => {
   const [cartonQty, setCartonQty] = useState(1);
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
+
+  useEffect(() => {
+    setCartonQty(1);
+    setIsDescriptionExpanded(false);
+  }, [product?.id]);
 
   if (!product) return null;
+
+  const description = product.description?.trim();
+  const isLongDescription = !!description && description.length > 90;
 
   const handleAdd = () => {
     onAddToCart(product, cartonQty);
@@ -101,12 +110,27 @@ export const ProductModal: React.FC<ProductModalProps> = ({
         </div>
 
         {/* Description */}
-        {product.description && (
+        {description && (
           <div className="mb-4">
             <h4 className="text-[13px] font-extrabold text-[#022c22] mb-1">توضیحات محصول</h4>
-            <p className="text-[12px] text-[#3f4944] leading-relaxed bg-[#ffffff] p-2.5 rounded-lg border border-[#e2e8f0]">
-              {product.description}
-            </p>
+            <div className="bg-[#ffffff] p-2.5 rounded-lg border border-[#e2e8f0]">
+              <p
+                className={`text-[12px] text-[#3f4944] leading-relaxed whitespace-pre-line ${
+                  isLongDescription && !isDescriptionExpanded ? 'line-clamp-2' : ''
+                }`}
+              >
+                {description}
+              </p>
+              {isLongDescription && (
+                <button
+                  type="button"
+                  onClick={() => setIsDescriptionExpanded((prev) => !prev)}
+                  className="mt-1.5 text-[11px] font-extrabold text-[#006c4a] hover:underline"
+                >
+                  {isDescriptionExpanded ? 'نمایش کمتر' : 'مشاهده بیشتر'}
+                </button>
+              )}
+            </div>
           </div>
         )}
 

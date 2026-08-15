@@ -18,9 +18,12 @@ export const Header: React.FC<HeaderProps> = ({
   unreadNotificationsCount = 2,
 }) => {
   return (
-    <header className="bg-white/85 backdrop-blur-xl sticky top-0 z-40 border-b border-x border-[#e2e8f0] rounded-b-2xl flex justify-between items-center px-4 py-2.5 w-full max-w-[448px] mx-auto h-16 flex-row shadow-sm">
+    <header
+      className="bg-white/85 backdrop-blur-xl sticky top-0 z-40 border-b border-x border-[#e2e8f0] rounded-b-2xl flex justify-between items-center px-4 pb-2.5 w-full max-w-[448px] mx-auto min-h-16 flex-row shadow-sm"
+      style={{ paddingTop: 'calc(0.625rem + env(safe-area-inset-top))' }}
+    >
       {/* Brand Title and Logo (RTL side right) */}
-      <div className="flex items-center gap-2.5 flex-row-reverse">
+      <div className="flex items-center gap-2.5 flex-row-reverse shrink-0 min-w-0">
         <div className="flex flex-col text-right">
           <span className="font-['Vazirmatn'] text-[18px] sm:text-[19px] font-black text-[#022c22] leading-tight">
             سیلانه <span className="text-[#006c4a] font-black">سبز</span>

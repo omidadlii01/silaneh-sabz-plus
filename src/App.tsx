@@ -433,7 +433,10 @@ export default function App() {
         </div>
 
         {toastMessage && (
-          <div className="sticky top-16 z-50 px-3 py-2 flex justify-center pointer-events-none">
+          <div
+            className="sticky z-50 px-3 py-2 flex justify-center pointer-events-none"
+            style={{ top: 'calc(4rem + env(safe-area-inset-top))' }}
+          >
             <div className="bg-white/95 backdrop-blur-xl border-2 border-[#a7f3d0] text-[#044e39] px-5 py-3 rounded-2xl text-[15px] font-black shadow-[0_12px_36px_rgba(5,150,105,0.22)] animate-in fade-in slide-in-from-top-3 duration-300 flex items-center gap-3.5 max-w-[94%] pointer-events-auto ring-4 ring-[#059669]/10">
               <div className="relative shrink-0 w-10 h-10 rounded-xl bg-gradient-to-br from-[#ecfdf5] to-[#d1fae5] border border-[#a7f3d0] flex items-center justify-center shadow-inner">
                 <span className="material-symbols-outlined text-[24px] text-[#059669]">
@@ -450,7 +453,10 @@ export default function App() {
 
         <main className="flex-1">
           {activeTab === 'home' && (
-            <div className="pb-28 space-y-7">
+            <div
+              className="space-y-7"
+              style={{ paddingBottom: 'calc(7rem + env(safe-area-inset-bottom))' }}
+            >
               <SearchBar
                 searchQuery={searchQuery}
                 setSearchQuery={setSearchQuery}

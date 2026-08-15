@@ -23,7 +23,10 @@ export const BottomNav: React.FC<BottomNavProps> = ({ activeTab, setActiveTab })
   ];
 
   return (
-    <div className="fixed bottom-3 left-1/2 -translate-x-1/2 w-[calc(100%-24px)] max-w-[424px] z-40 p-[2px] rounded-2xl bg-gradient-to-r from-[#10b981] via-[#34d399] to-[#059669] shadow-[0_0_20px_rgba(16,185,129,0.35),0_10px_25px_-5px_rgba(0,108,74,0.3)]">
+    <div
+      className="fixed left-1/2 -translate-x-1/2 w-[calc(100%-24px)] max-w-[424px] z-40 p-[2px] rounded-2xl bg-gradient-to-r from-[#10b981] via-[#34d399] to-[#059669] shadow-[0_0_20px_rgba(16,185,129,0.35),0_10px_25px_-5px_rgba(0,108,74,0.3)]"
+      style={{ bottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}
+    >
       <nav className="w-full bg-[#f4fbf7]/95 backdrop-blur-2xl rounded-[14px] h-18 px-2 flex justify-around items-center flex-row">
         {tabs.map((tab) => {
           const isActive = activeTab === tab.id;

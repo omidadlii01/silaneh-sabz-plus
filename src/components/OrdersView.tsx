@@ -47,7 +47,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ orders, onReorder }) => 
 
   const timeSlotOptions = [
     { id: 'morning', label: '۰۸:۰۰ تا ۱۲:۰۰', title: 'شیفت صبح', icon: 'wb_sunny' },
-    { id: 'noon', label: '۱۲:۰۰ تا ۱۵:۰۰', title: 'شیفت ظهر', icon: 'solare' },
+    { id: 'noon', label: '۱۲:۰۰ تا ۱۵:۰۰', title: 'شیفت ظهر', icon: 'partly_cloudy_day' },
     { id: 'afternoon', label: '۱۵:۰۰ تا ۱۸:۰۰', title: 'شیفت عصر', icon: 'light_mode' },
     { id: 'evening', label: '۱۸:۰۰ تا ۲۱:۰۰', title: 'شیفت شب', icon: 'bedtime' },
   ];
@@ -148,7 +148,10 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ orders, onReorder }) => 
   };
 
   return (
-    <div className="pb-28 pt-3 px-3 text-right bg-[#f8fafc] min-h-screen relative">
+    <div
+      className="pt-3 px-3 text-right bg-[#f8fafc] min-h-screen relative"
+      style={{ paddingBottom: 'calc(7rem + env(safe-area-inset-bottom))' }}
+    >
       {/* Toast Notification */}
       {toastMessage && (
         <div className="fixed top-4 left-4 right-4 z-50 bg-[#004532] text-white p-3.5 rounded-2xl shadow-xl border border-[#059669] flex items-center justify-between text-[12.5px] font-black animate-in slide-in-from-top duration-300">

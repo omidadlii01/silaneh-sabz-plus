@@ -158,7 +158,10 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
   });
 
   return (
-    <div className="pb-28 pt-3 px-3 text-right bg-[#f8fafc] min-h-screen">
+    <div
+      className="pt-3 px-3 text-right bg-[#f8fafc] min-h-screen"
+      style={{ paddingBottom: 'calc(7rem + env(safe-area-inset-bottom))' }}
+    >
       {/* 1. Top Navbar Header */}
       <div className="flex justify-between items-center mb-3 bg-white p-3 rounded-2xl shadow-xs border border-[#e2e8f0]">
         <div className="flex items-center gap-2.5">

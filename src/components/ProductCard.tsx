@@ -19,7 +19,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 }) => {
   return (
     <div
-      className={`bg-white/75 backdrop-blur-xl border border-[#006c4a]/30 shadow-[0_4px_16px_rgba(0,108,74,0.08)] hover:shadow-[0_6px_24px_rgba(0,108,74,0.16)] hover:border-[#006c4a]/60 rounded-2xl p-3.5 flex flex-col justify-between relative text-right transition-all duration-200 group ${className}`}
+      className={`bg-white/75 backdrop-blur-xl border border-[#006c4a]/30 shadow-[0_4px_16px_rgba(0,108,74,0.08)] hover:shadow-[0_6px_24px_rgba(0,108,74,0.16)] hover:border-[#006c4a]/60 rounded-2xl p-3.5 flex flex-col justify-between relative text-right transition-all duration-200 group overflow-hidden ${className}`}
     >
       {/* Top Left '+' Button (Visible ONLY when qty === 0) */}
       {qty === 0 && (
@@ -92,11 +92,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         {/* Pricing & Profit Grid */}
         <div className="flex items-start justify-between gap-1 pt-2 border-t border-[#f1f5f9] mt-1">
           {/* Right Column (RTL): Main Price (Top) and Consumer Price (Bottom - Directly underneath) */}
-          <div className="flex flex-col text-right">
+          <div className="flex flex-col text-right min-w-0 flex-1">
             {/* Main Wholesale Price */}
-            <div className="flex flex-col">
-              <div className="flex items-baseline gap-0.5">
-                <span className="text-[#022c22] font-black text-[13.5px]">
+            <div className="flex flex-col min-w-0">
+              <div className="flex items-baseline gap-0.5 flex-wrap">
+                <span className="text-[#022c22] font-black text-[13.5px] break-words">
                   {formatPrice(product.price)}
                 </span>
                 <span className="text-[9px] text-[#6f7973] font-bold">تومان</span>
@@ -106,9 +106,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
             {/* Consumer Price (Directly underneath main price) */}
             {product.consumerPrice > 0 && (
-              <div className="flex flex-col mt-1.5 pt-1 border-t border-dashed border-[#e2e8f0]">
-                <div className="flex items-baseline gap-0.5">
-                  <span className="text-[11px] font-extrabold text-[#334155]">
+              <div className="flex flex-col mt-1.5 pt-1 border-t border-dashed border-[#e2e8f0] min-w-0">
+                <div className="flex items-baseline gap-0.5 flex-wrap">
+                  <span className="text-[11px] font-extrabold text-[#334155] break-words">
                     {formatPrice(product.consumerPrice)}
                   </span>
                   <span className="text-[8.5px] text-[#6f7973]">تومان</span>
@@ -119,10 +119,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           </div>
 
           {/* Left Column (RTL): Discount Badge (Top) and Profit (Bottom - Directly underneath) */}
-          <div className="flex flex-col items-end text-left">
+          <div className="flex flex-col items-end text-left min-w-0 shrink-0">
             {/* Discount Badge */}
             {product.discountPercent > 0 ? (
-              <span className="bg-[#ecfdf5] text-[#006c4a] border border-[#059669]/30 px-1.5 py-0.5 rounded-md text-[10px] font-black shrink-0">
+              <span className="bg-[#ecfdf5] text-[#006c4a] border border-[#059669]/30 px-1.5 py-0.5 rounded-md text-[10px] font-black shrink-0 whitespace-nowrap">
                 {toPersianDigits(product.discountPercent)}٪ تخفیف
               </span>
             ) : (
@@ -131,9 +131,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
             {/* Profit Amount (Directly underneath discount percentage) */}
             {product.consumerPrice > product.price && (
-              <div className="flex flex-col items-end mt-1.5 pt-1">
-                <div className="flex items-baseline gap-0.5">
-                  <span className="text-[10.5px] font-black text-[#059669]">
+              <div className="flex flex-col items-end mt-1.5 pt-1 min-w-0">
+                <div className="flex items-baseline gap-0.5 flex-wrap justify-end">
+                  <span className="text-[10.5px] font-black text-[#059669] break-words">
                     {formatPrice(product.consumerPrice - product.price)}
                   </span>
                   <span className="text-[8.5px] text-[#059669] font-bold">تومان</span>

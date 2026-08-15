@@ -100,7 +100,10 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
   return (
     <div className="fixed inset-0 z-50 bg-white max-w-[448px] mx-auto flex flex-col h-full animate-in fade-in duration-200 text-right overflow-hidden border-x border-[#e2e8f0]/60">
       {/* Top Search Bar Header */}
-      <div className="p-3.5 bg-white border-b border-[#e2e8f0]/80 flex items-center gap-3 sticky top-0 z-10 shadow-2xs">
+      <div
+        className="p-3.5 bg-white border-b border-[#e2e8f0]/80 flex items-center gap-3 sticky top-0 z-10 shadow-2xs"
+        style={{ paddingTop: 'calc(0.875rem + env(safe-area-inset-top))' }}
+      >
         {/* Back Button (RTL arrow pointing right to go back) */}
         <button
           onClick={onClose}
@@ -143,7 +146,10 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 overflow-y-auto px-4 py-5 space-y-7 pb-24">
+      <div
+        className="flex-1 overflow-y-auto px-4 py-5 space-y-7"
+        style={{ paddingBottom: 'calc(6rem + env(safe-area-inset-bottom))' }}
+      >
         {/* Default View when NO query is entered */}
         {!query.trim() ? (
           <>
