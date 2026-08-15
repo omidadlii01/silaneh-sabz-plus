@@ -459,10 +459,11 @@ export default function App() {
                 onClickSearch={() => setIsSearchOverlayOpen(true)}
               />
 
-              <CategoryGrid
-                categories={categories}
-                selectedCategory={selectedCategory}
-                onSelectCategory={(catId) => handleOpenProductsTab(catId)}
+              <BrandsGrid
+                brands={brands}
+                selectedBrand={selectedBrand}
+                onSelectBrand={(bName) => handleOpenProductsTab(undefined, bName)}
+                onViewAllBrands={() => handleOpenProductsTab()}
               />
 
               <PopularProducts
@@ -473,11 +474,10 @@ export default function App() {
                 onViewAll={() => handleOpenProductsTab()}
               />
 
-              <BrandsGrid
-                brands={brands}
-                selectedBrand={selectedBrand}
-                onSelectBrand={(bName) => handleOpenProductsTab(undefined, bName)}
-                onViewAllBrands={() => handleOpenProductsTab()}
+              <CategoryGrid
+                categories={categories}
+                selectedCategory={selectedCategory}
+                onSelectCategory={(catId) => handleOpenProductsTab(catId)}
               />
 
               {carouselOffers.length > 0 && (
