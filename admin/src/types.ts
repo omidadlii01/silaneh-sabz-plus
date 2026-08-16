@@ -86,6 +86,7 @@ export interface Customer {
   total_orders_count?: number;
   total_spent?: number;
   city?: string;
+  created_at?: string;
 }
 
 export interface OrderItem {

@@ -15,15 +15,15 @@ export const CustomersPage: React.FC<CustomersPageProps> = ({ onOpenCustomerModa
   const { customers, marketers, updateCustomerMarketer, updateCustomerStatus } = useData();
   const [searchQuery, setSearchQuery] = useState('');
   const [bizFilter, setBizFilter] = useState('all');
-  const [sortBy, setSortBy] = useState<'name' | 'spent_desc' | 'orders_desc'>('spent_desc');
+  const [sortBy, setSortBy] = useState<'name' | 'spent_desc' | 'orders_desc' | 'newest'>('newest');
 
   const handleResetFilters = () => {
     setSearchQuery('');
     setBizFilter('all');
-    setSortBy('spent_desc');
+    setSortBy('newest');
   };
 
-  const isFiltered = searchQuery !== '' || bizFilter !== 'all' || sortBy !== 'spent_desc';
+  const isFiltered = searchQuery !== '' || bizFilter !== 'all' || sortBy !== 'newest';
 
   const filteredCustomers = customers
     .filter(c => {
@@ -41,6 +41,7 @@ export const CustomersPage: React.FC<CustomersPageProps> = ({ onOpenCustomerModa
       if (sortBy === 'name') return a.store_name.localeCompare(b.store_name, 'fa');
       if (sortBy === 'spent_desc') return (b.total_spent || 0) - (a.total_spent || 0);
       if (sortBy === 'orders_desc') return (b.total_orders_count || 0) - (a.total_orders_count || 0);
+      if (sortBy === 'newest') return (b.created_at || '').localeCompare(a.created_at || '');
       return 0;
     });
 
@@ -101,6 +102,7 @@ export const CustomersPage: React.FC<CustomersPageProps> = ({ onOpenCustomerModa
             >
               <option value="spent_desc">بیشترین حجم خرید</option>
               <option value="orders_desc">بیشترین تعداد سفارش</option>
+              <option value="newest">جدیدترین ثبت‌نام</option>
               <option value="name">نام فروشگاه (الفبا)</option>
             </select>
           </div>
@@ -140,6 +142,7 @@ export const CustomersPage: React.FC<CustomersPageProps> = ({ onOpenCustomerModa
                   <th className="p-3.5">بازاریاب مسئول (تغییر آنلاین)</th>
                   <th className="p-3.5 text-center">تعداد سفارش</th>
                   <th className="p-3.5 text-left">مجموع خرید (تومان)</th>
+                  <th className="p-3.5">تاریخ ثبت‌نام</th>
                   <th className="p-3.5 text-center">وضعیت</th>
                   <th className="p-3.5 text-center">عملیات</th>
                 </tr>
@@ -175,6 +178,17 @@ export const CustomersPage: React.FC<CustomersPageProps> = ({ onOpenCustomerModa
                     <td className="p-3.5 text-center font-bold text-slate-800">{cust.total_orders_count || 0}</td>
                     <td className="p-3.5 text-left font-black text-[#006c4a]">
                       {(cust.total_spent || 0).toLocaleString('fa-IR')}
+                    </td>
+                    <td className="p-3.5 text-slate-600 whitespace-nowrap">
+                      {cust.created_at
+                        ? new Date(cust.created_at.replace(' ', 'T') + 'Z').toLocaleString('fa-IR', {
+                            year: 'numeric',
+                            month: '2-digit',
+                            day: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })
+                        : '—'}
                     </td>
                     <td className="p-3.5 text-center">
                       <button

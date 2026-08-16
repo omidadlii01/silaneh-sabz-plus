@@ -33,6 +33,14 @@ export const AuthView: React.FC<AuthViewProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  // Holds the customer record once signup has actually succeeded against the
+  // server (register flow calls the real API on form submit, not on OTP
+  // confirm — see handleRegisterSubmit). This prevents the previous bug
+  // where a customer could fill the form, see the app move on to the OTP
+  // screen, then abandon/close before "confirming" — silently losing their
+  // registration because the real API call hadn't happened yet.
+  const [pendingCustomer, setPendingCustomer] = useState<Customer | null>(null);
+
   // Start OTP Countdown timer when entering OTP step
   React.useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -82,11 +90,34 @@ export const AuthView: React.FC<AuthViewProps> = ({
     }
 
     setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-      setStep('otp');
-      setOtpTimer(60);
-    }, 800);
+
+    // Register the customer with the server right away, on form submit —
+    // NOT after the (non-functional) OTP step. This is the real network
+    // call; if it fails (duplicate phone, network error, etc.) the person
+    // sees the actual error immediately and stays on the form instead of
+    // being moved forward to an OTP screen that would otherwise falsely
+    // suggest the account had already been created.
+    (async () => {
+      try {
+        const [firstName, ...rest] = regName.trim().split(/\s+/);
+        const lastName = rest.join(' ') || firstName;
+        const customer = await apiSignup({
+          firstName,
+          lastName,
+          phone: regPhone.trim(),
+          storeName: regStoreName.trim(),
+          businessType: regStoreType as BusinessType,
+          address: '',
+        });
+        setPendingCustomer(customer);
+        setIsLoading(false);
+        setStep('otp');
+        setOtpTimer(60);
+      } catch (err) {
+        setIsLoading(false);
+        setErrorMessage(err instanceof Error ? err.message : 'خطا در ارتباط با سرور. دوباره تلاش کنید.');
+      }
+    })();
   };
 
   const handleVerifyOtp = (e?: React.FormEvent) => {
@@ -96,21 +127,16 @@ export const AuthView: React.FC<AuthViewProps> = ({
 
     (async () => {
       try {
-        let customer: Customer;
-        if (mode === 'login') {
-          customer = await apiLogin(loginPhone.trim());
-        } else {
-          const [firstName, ...rest] = regName.trim().split(/\s+/);
-          const lastName = rest.join(' ') || firstName;
-          customer = await apiSignup({
-            firstName,
-            lastName,
-            phone: regPhone.trim(),
-            storeName: regStoreName.trim(),
-            businessType: regStoreType as BusinessType,
-            address: '',
-          });
+        // Register flow: the account was already created server-side in
+        // handleRegisterSubmit, so this step just finalizes local login —
+        // no second network call, no risk of duplicate/lost signups.
+        if (mode === 'register' && pendingCustomer) {
+          setIsLoading(false);
+          onLoginSuccess(pendingCustomer);
+          return;
         }
+
+        const customer = await apiLogin(loginPhone.trim());
         setIsLoading(false);
         onLoginSuccess(customer);
       } catch (err) {

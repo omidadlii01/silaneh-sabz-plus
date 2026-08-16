@@ -195,6 +195,7 @@ function marketerCustomerToJson(c: any) {
     total_orders_count: c.total_orders_count || 0,
     total_spent: c.total_spent || 0,
     last_order_date: c.last_order_date || null,
+    created_at: c.created_at || null,
   };
 }
 
