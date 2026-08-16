@@ -47,11 +47,24 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x android/gradlew
 
-      - name: Build debug APK
+      - name: Decode signing keystore
+        run: echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/app/silaneh-release.keystore
+
+      - name: Build signed release APK
+        env:
+          ANDROID_KEYSTORE_PATH: silaneh-release.keystore
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          # versionCode must strictly increase for Android to accept an
+          # install as an "update" rather than a downgrade. github.run_number
+          # only ever goes up, so it's a safe, simple source for this.
+          ANDROID_VERSION_CODE: ${{ github.run_number }}
+          ANDROID_VERSION_NAME: "1.${{ github.run_number }}"
         run: |
           set +e
           cd android
-          ./gradlew assembleDebug --no-daemon > gradle_output.log 2>&1
+          ./gradlew assembleRelease --no-daemon > gradle_output.log 2>&1
           code=$?
           tail -c 4000 gradle_output.log
           if [ $code -ne 0 ]; then
@@ -60,22 +73,26 @@ jobs:
             exit $code
           fi
 
+      - name: Remove keystore from disk
+        if: always()
+        run: rm -f android/app/silaneh-release.keystore
+
       - name: Rename APK
-        run: cp android/app/build/outputs/apk/debug/app-debug.apk android/app/build/outputs/apk/debug/silaneh-sabz-plus.apk
+        run: cp android/app/build/outputs/apk/release/app-release.apk android/app/build/outputs/apk/release/silaneh-sabz-plus.apk
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: silaneh-sabz-plus-debug-apk
-          path: android/app/build/outputs/apk/debug/silaneh-sabz-plus.apk
+          name: silaneh-sabz-plus-release-apk
+          path: android/app/build/outputs/apk/release/silaneh-sabz-plus.apk
 
       - name: Publish APK as public Release asset
         uses: softprops/action-gh-release@v2
         with:
           tag_name: latest
-          name: "Silaneh Sabz Plus - Latest APK"
-          body: "Automatically built debug APK. Direct download, no GitHub login required."
-          files: android/app/build/outputs/apk/debug/silaneh-sabz-plus.apk
+          name: "Silaneh Sabz Plus - Latest APK (v1.${{ github.run_number }})"
+          body: "Automatically built, signed release APK. Direct download, no GitHub login required. Installing this over an existing install upgrades it in place (same signing key on every build)."
+          files: android/app/build/outputs/apk/release/silaneh-sabz-plus.apk
           make_latest: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
