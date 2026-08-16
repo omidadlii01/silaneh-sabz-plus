@@ -72,18 +72,30 @@ export const ProductModal: React.FC<ProductModalProps> = ({
           دسته‌بندی: <span className="font-bold text-[#171c1f]">{product.category}</span>
         </p>
 
-        {/* Carton specs alert */}
-        <div className="bg-[#f0f4f8] border border-[#bec9c2]/40 rounded-xl p-3 mb-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-[#006c4a]">package_2</span>
-            <div className="flex flex-col text-right">
-              <span className="text-[12px] font-bold text-[#171c1f]">بسته‌بندی عمده (کارتن)</span>
-              <span className="text-[11px] text-[#6f7973]">
-                هر کارتن شامل {toPersianDigits(product.cartonCount)} عدد می‌باشد.
-              </span>
+        {/* Description */}
+        {description && (
+          <div className="mb-4">
+            <h4 className="text-[13px] font-extrabold text-[#022c22] mb-1">توضیحات محصول</h4>
+            <div className="bg-[#ffffff] p-2.5 rounded-lg border border-[#e2e8f0]">
+              <p
+                className={`text-[12px] text-[#3f4944] leading-relaxed whitespace-pre-line ${
+                  isLongDescription && !isDescriptionExpanded ? 'line-clamp-2' : ''
+                }`}
+              >
+                {description}
+              </p>
+              {isLongDescription && (
+                <button
+                  type="button"
+                  onClick={() => setIsDescriptionExpanded((prev) => !prev)}
+                  className="mt-1.5 text-[11px] font-extrabold text-[#006c4a] hover:underline"
+                >
+                  {isDescriptionExpanded ? 'نمایش کمتر' : 'مشاهده بیشتر'}
+                </button>
+              )}
             </div>
           </div>
-        </div>
+        )}
 
         {/* Pricing Box */}
         <div className="bg-[#f6fafe] border border-[#e2e8f0] rounded-xl p-3 mb-4">
@@ -109,30 +121,18 @@ export const ProductModal: React.FC<ProductModalProps> = ({
           </div>
         </div>
 
-        {/* Description */}
-        {description && (
-          <div className="mb-4">
-            <h4 className="text-[13px] font-extrabold text-[#022c22] mb-1">توضیحات محصول</h4>
-            <div className="bg-[#ffffff] p-2.5 rounded-lg border border-[#e2e8f0]">
-              <p
-                className={`text-[12px] text-[#3f4944] leading-relaxed whitespace-pre-line ${
-                  isLongDescription && !isDescriptionExpanded ? 'line-clamp-2' : ''
-                }`}
-              >
-                {description}
-              </p>
-              {isLongDescription && (
-                <button
-                  type="button"
-                  onClick={() => setIsDescriptionExpanded((prev) => !prev)}
-                  className="mt-1.5 text-[11px] font-extrabold text-[#006c4a] hover:underline"
-                >
-                  {isDescriptionExpanded ? 'نمایش کمتر' : 'مشاهده بیشتر'}
-                </button>
-              )}
+        {/* Carton specs alert */}
+        <div className="bg-[#f0f4f8] border border-[#bec9c2]/40 rounded-xl p-3 mb-4 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-[#006c4a]">package_2</span>
+            <div className="flex flex-col text-right">
+              <span className="text-[12px] font-bold text-[#171c1f]">بسته‌بندی عمده (کارتن)</span>
+              <span className="text-[11px] text-[#6f7973]">
+                هر کارتن شامل {toPersianDigits(product.cartonCount)} عدد می‌باشد.
+              </span>
             </div>
           </div>
-        )}
+        </div>
 
         {/* Specs Table */}
         {product.specs && product.specs.length > 0 && (
