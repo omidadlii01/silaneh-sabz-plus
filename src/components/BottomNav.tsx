@@ -17,11 +17,11 @@ export const BottomNav: React.FC<BottomNavProps> = ({ activeTab, setActiveTab })
 
   return (
     <div
-      className="fixed left-1/2 -translate-x-1/2 w-[calc(100%-24px)] max-w-[424px] z-40 p-[2px] rounded-2xl bg-gradient-to-r from-[#10b981] via-[#34d399] to-[#059669] shadow-[0_0_20px_rgba(16,185,129,0.35),0_10px_25px_-5px_rgba(0,108,74,0.3)]"
+      className="fixed left-1/2 -translate-x-1/2 w-[calc(100%-24px)] max-w-[424px] z-40 shadow-[0_10px_25px_-5px_rgba(0,0,0,0.15)]"
       style={{ bottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}
     >
       {/* overflow-visible so the active tab's bubble can pop up above the bar's top edge */}
-      <nav className="relative w-full overflow-visible bg-[#f4fbf7]/95 backdrop-blur-2xl rounded-[14px] h-18 px-1.5 flex justify-around items-end pb-1.5">
+      <nav className="relative w-full overflow-visible bg-white rounded-2xl h-18 px-1.5 flex justify-around items-end pb-1.5">
         {tabs.map((tab) => {
           const isActive = activeTab === tab.id;
           return (
