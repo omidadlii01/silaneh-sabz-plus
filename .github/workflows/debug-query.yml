@@ -46,5 +46,7 @@ jobs:
             echo "::error::QUERY_FAILED: $msg"
             exit $code
           fi
-          msg=$(echo "$OUT" | tail -c 1800 | tr '\n' ' ' | tr '%' ' ')
-          echo "::notice::QUERY_RESULT: $msg"
+          head_msg=$(echo "$OUT" | head -c 1800 | tr '\n' ' ' | tr '%' ' ')
+          echo "::notice::QUERY_RESULT_HEAD: $head_msg"
+          tail_msg=$(echo "$OUT" | tail -c 1800 | tr '\n' ' ' | tr '%' ' ')
+          echo "::notice::QUERY_RESULT_TAIL: $tail_msg"
