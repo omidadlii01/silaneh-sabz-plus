@@ -55,7 +55,7 @@ export const Header: React.FC<HeaderProps> = ({
           <img
             src={LOGO_URL}
             alt="سیلانه سبز"
-            className="h-10 sm:h-11 w-auto object-contain bg-transparent mix-blend-multiply"
+            className="h-10 sm:h-11 w-auto object-contain"
           />
         </div>
       </div>
