@@ -394,9 +394,6 @@ export default function App() {
               />
             </div>
           </div>
-          <span className="text-white/70 text-[12px] font-bold tracking-wide animate-pulse-subtle">
-            در حال آماده‌سازی فروشگاه...
-          </span>
         </div>
       </div>
     );

@@ -177,31 +177,18 @@ export const AuthView: React.FC<AuthViewProps> = ({
       <div className="w-full max-w-[420px] my-auto flex flex-col items-center z-10 py-6">
         {/* Seylaneh Sabz Official Brand Logo matching the user's uploaded image */}
         <div className="flex flex-col items-center mb-6 text-center">
-          <div className="flex items-center justify-center gap-3.5 mb-2 py-1 px-3" dir="ltr">
-            {/* Header logo mark, background removed, styled to look etched into the background */}
+          <div className="flex items-center justify-center mb-2 py-1 px-3 w-full">
+            {/* Full logo lockup (icon + wordmark), background removed, styled to look etched into the background */}
             <img
               src={logoMark}
               alt="سیلانه سبز"
-              className="w-16 h-11 object-contain opacity-95 shrink-0"
+              className="w-full max-w-[300px] h-auto object-contain opacity-95"
               style={{
                 filter:
-                  'brightness(0) invert(1) drop-shadow(0 1px 0 rgba(255,255,255,0.35)) drop-shadow(0 -1.5px 2px rgba(0,0,0,0.45))',
+                  'drop-shadow(0 1px 0 rgba(255,255,255,0.35)) drop-shadow(0 -1.5px 2px rgba(0,0,0,0.45))',
                 mixBlendMode: 'soft-light',
               }}
             />
-
-            {/* Right Side English Text Stack */}
-            <div className="text-left flex flex-col justify-center leading-none text-white tracking-widest font-sans border-l-2 border-white/30 pl-3.5">
-              <span className="text-[8.5px] font-bold tracking-[0.24em] text-white/90 uppercase block mb-1">
-                PRODUCTION &amp; TRADE
-              </span>
-              <span className="text-[20px] font-black tracking-widest block leading-none">
-                SEYLANEH
-              </span>
-              <span className="text-[20px] font-black tracking-widest block leading-tight mt-0.5">
-                SABZ
-              </span>
-            </div>
           </div>
 
           <h1 className="text-[21px] font-black text-white tracking-tight drop-shadow-sm mt-1">
