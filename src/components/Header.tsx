@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { toPersianDigits } from '../utils/persian';
 import logoImg from '../assets/logo-header-new.png';
 
@@ -9,6 +9,10 @@ interface HeaderProps {
   onOpenCart: () => void;
   cartItemCount: number;
   unreadNotificationsCount?: number;
+  // Increment this from the parent every time an item is added to or
+  // removed from the cart. Header reacts with a brief bump + green dot on
+  // the cart icon instead of a separate toast message.
+  cartBumpSignal?: number;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -16,7 +20,21 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenCart,
   cartItemCount,
   unreadNotificationsCount = 2,
+  cartBumpSignal = 0,
 }) => {
+  const [cartBump, setCartBump] = useState(false);
+  const isFirstRender = useRef(true);
+
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    setCartBump(true);
+    const t = setTimeout(() => setCartBump(false), 700);
+    return () => clearTimeout(t);
+  }, [cartBumpSignal]);
+
   return (
     <header
       className="bg-white/85 backdrop-blur-xl sticky top-0 z-40 border-b border-x border-[#e2e8f0]/70 rounded-b-2xl flex justify-between items-center px-4 pb-2.5 w-full max-w-[448px] mx-auto min-h-16 flex-row shadow-[0_1px_0_rgba(2,44,34,0.03),0_8px_22px_-14px_rgba(2,44,34,0.18)]"
@@ -33,12 +51,11 @@ export const Header: React.FC<HeaderProps> = ({
           </span>
           <span className="text-[10px] text-[#006c4a]/90 font-bold tracking-wider">پلاس B2B</span>
         </div>
-        <div className="relative flex items-center justify-center bg-transparent border-none shadow-none">
-          <div className="absolute inset-0 rounded-full bg-[#34d399]/25 blur-md scale-90" />
+        <div className="flex items-center justify-center bg-transparent border-none shadow-none">
           <img
             src={LOGO_URL}
             alt="سیلانه سبز"
-            className="relative h-10 sm:h-11 w-auto object-contain bg-transparent mix-blend-multiply drop-shadow-[0_2px_6px_rgba(0,108,74,0.18)]"
+            className="h-10 sm:h-11 w-auto object-contain bg-transparent mix-blend-multiply"
           />
         </div>
       </div>
@@ -51,11 +68,18 @@ export const Header: React.FC<HeaderProps> = ({
           className="relative p-2 rounded-full hover:bg-[#ecfdf5] active:bg-[#d1fae5] active:scale-90 transition-all duration-150 text-[#022c22] flex items-center justify-center"
           title="سبد خرید"
         >
-          <span className="material-symbols-outlined text-[24px]">shopping_cart</span>
+          <span
+            className={`material-symbols-outlined text-[24px] ${cartBump ? 'animate-cart-bump' : ''}`}
+          >
+            shopping_cart
+          </span>
           {cartItemCount > 0 && (
             <span className="absolute -top-1 -right-1 bg-gradient-to-br from-[#059669] to-[#006c4a] text-white text-[10px] font-extrabold w-5 h-5 rounded-full flex items-center justify-center border-2 border-white shadow-[0_2px_6px_rgba(0,108,74,0.4)]">
               {toPersianDigits(cartItemCount)}
             </span>
+          )}
+          {cartBump && (
+            <span className="absolute -top-0.5 -left-0.5 w-3 h-3 rounded-full bg-[#34d399] ring-2 ring-white animate-cart-ping" />
           )}
         </button>
 

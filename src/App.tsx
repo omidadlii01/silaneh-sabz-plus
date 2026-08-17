@@ -221,6 +221,8 @@ export default function App() {
   };
 
   // Add / Update Cart Quantity
+  const [cartBumpSignal, setCartBumpSignal] = useState(0);
+
   const handleAddToCart = (product: Product, delta: number) => {
     setCartItems((prev) => {
       const existingIndex = prev.findIndex((ci) => ci.product.id === product.id);
@@ -237,7 +239,12 @@ export default function App() {
         return [...prev, { product, quantity: delta }];
       }
     });
-    showToast(`کارتن کالا «${product.name}» به سبد اضافه شد.`);
+    // Previously this always showed a toast reading "... added to cart" —
+    // even when delta was negative (i.e. the person was decreasing the
+    // quantity), which was both wrong and, per feedback, not a good look
+    // (heavy green box, bold font). Now the cart icon in the header bumps
+    // and briefly shows a green dot instead, on every add AND remove.
+    setCartBumpSignal((s) => s + 1);
   };
 
   const handleUpdateQty = (productId: string, delta: number) => {
@@ -252,6 +259,7 @@ export default function App() {
         })
         .filter(Boolean) as CartItem[]
     );
+    setCartBumpSignal((s) => s + 1);
   };
 
   const handleRemoveItem = (productId: string) => {
@@ -433,6 +441,7 @@ export default function App() {
             }}
             cartItemCount={totalCartCount}
             unreadNotificationsCount={2}
+            cartBumpSignal={cartBumpSignal}
           />
         </div>
 
