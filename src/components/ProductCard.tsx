@@ -19,7 +19,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 }) => {
   return (
     <div
-      className={`bg-white/75 backdrop-blur-xl border border-[#006c4a]/30 shadow-[0_4px_16px_rgba(0,108,74,0.08)] hover:shadow-[0_6px_24px_rgba(0,108,74,0.16)] hover:border-[#006c4a]/60 rounded-2xl p-3.5 flex flex-col justify-between relative text-right transition-all duration-200 group overflow-hidden ${className}`}
+      className={`bg-white border border-[#e7ece9] shadow-[0_1px_2px_rgba(2,44,34,0.04),0_10px_24px_-16px_rgba(2,44,34,0.28)] hover:shadow-[0_2px_4px_rgba(2,44,34,0.06),0_16px_32px_-14px_rgba(0,108,74,0.28)] hover:border-[#006c4a]/40 hover:-translate-y-0.5 rounded-2xl p-3.5 flex flex-col justify-between relative text-right transition-all duration-300 ease-out group overflow-hidden ${className}`}
     >
       {/* Top Left '+' Button (Visible ONLY when qty === 0) */}
       {qty === 0 && (
@@ -28,7 +28,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             e.stopPropagation();
             onAddToCart(product, 1);
           }}
-          className="absolute top-2.5 left-2.5 z-10 w-8 h-8 rounded-xl bg-white border border-[#006c4a]/30 text-[#006c4a] hover:bg-[#006c4a] hover:text-white flex items-center justify-center transition-all shadow-xs active:scale-90"
+          className="absolute top-2.5 left-2.5 z-10 w-8 h-8 rounded-xl bg-white border border-[#006c4a]/25 text-[#006c4a] hover:bg-gradient-to-br hover:from-[#059669] hover:to-[#006c4a] hover:text-white hover:border-transparent flex items-center justify-center transition-all duration-200 shadow-[0_2px_6px_rgba(2,44,34,0.1)] hover:shadow-[0_4px_12px_rgba(0,108,74,0.35)] active:scale-90"
           title="افزودن به سبد خرید"
         >
           <span className="material-symbols-outlined text-[18px]">add</span>
@@ -38,16 +38,16 @@ export const ProductCard: React.FC<ProductCardProps> = ({
       {/* Clickable Image & Info */}
       <div onClick={() => onSelectProduct(product)} className="cursor-pointer flex flex-col">
         {/* Product Image */}
-        <div className="aspect-square w-full flex items-center justify-center mb-2 p-1.5 bg-[#f8fafc]/50 rounded-xl">
+        <div className="aspect-square w-full flex items-center justify-center mb-2 p-1.5 bg-gradient-to-b from-[#f8fafc] to-[#f1f5f4] rounded-xl overflow-hidden">
           <img
             src={product.image}
             alt={product.name}
-            className="h-full w-auto object-contain mix-blend-multiply transition-transform duration-300 group-hover:scale-105"
+            className="h-full w-auto object-contain mix-blend-multiply transition-transform duration-300 ease-out group-hover:scale-[1.07]"
           />
         </div>
 
         {/* Brand */}
-        <span className="text-[10px] text-[#006c4a] font-black mb-0.5">
+        <span className="text-[10px] text-[#006c4a] font-black mb-0.5 tracking-tight">
           {product.brand}
         </span>
 
@@ -66,10 +66,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({
       {/* Middle Stepper (Visible ONLY when qty > 0) */}
       <div className="mt-2.5 pt-2 border-t border-[#f1f5f9]">
         {qty > 0 ? (
-          <div className="bg-[#f0f4f8] border border-[#e2e8f0] rounded-xl p-1 flex items-center justify-between mb-2 shadow-inner">
+          <div className="bg-gradient-to-b from-[#f4f9f7] to-[#eef4f1] border border-[#dce7e2] rounded-xl p-1 flex items-center justify-between mb-2 shadow-inner">
             <button
               onClick={() => onAddToCart(product, 1)}
-              className="w-8 h-8 bg-[#006c4a] hover:bg-[#022c22] text-white rounded-lg flex items-center justify-center font-black text-[16px] active:scale-95 transition-transform shadow-xs"
+              className="w-8 h-8 bg-gradient-to-br from-[#059669] to-[#006c4a] hover:brightness-110 text-white rounded-lg flex items-center justify-center font-black text-[16px] active:scale-90 transition-all duration-150 shadow-[0_2px_6px_rgba(0,108,74,0.35)]"
               title="افزودن تعداد"
             >
               +
@@ -79,7 +79,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             </span>
             <button
               onClick={() => onAddToCart(product, -1)}
-              className="w-8 h-8 bg-white hover:bg-[#fff5f5] text-[#ba1a1a] border border-[#e2e8f0] rounded-lg flex items-center justify-center font-black text-[16px] active:scale-95 transition-transform shadow-xs"
+              className="w-8 h-8 bg-white hover:bg-[#fef2f2] text-[#ba1a1a] border border-[#e2e8f0] rounded-lg flex items-center justify-center font-black text-[16px] active:scale-90 transition-all duration-150 shadow-xs"
               title="کاهش تعداد"
             >
               -
@@ -122,7 +122,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           <div className="flex flex-col items-end text-left min-w-0 shrink-0">
             {/* Discount Badge */}
             {product.discountPercent > 0 ? (
-              <span className="bg-[#ecfdf5] text-[#006c4a] border border-[#059669]/30 px-1.5 py-0.5 rounded-md text-[10px] font-black shrink-0 whitespace-nowrap">
+              <span className="bg-gradient-to-l from-[#059669] to-[#10b981] text-white px-1.5 py-0.5 rounded-md text-[10px] font-black shrink-0 whitespace-nowrap shadow-[0_2px_5px_rgba(5,150,105,0.3)]">
                 {toPersianDigits(product.discountPercent)}٪ تخفیف
               </span>
             ) : (

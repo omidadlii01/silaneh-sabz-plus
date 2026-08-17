@@ -373,18 +373,22 @@ export default function App() {
     // main.tsx removes #app-splash as soon as React mounts — before the
     // catalog has actually finished loading from the API.
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0f5338]">
-        <div className="flex flex-col items-center gap-4">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-[#0f5338] to-[#0a3d29]">
+        <div className="flex flex-col items-center gap-5">
           <div className="relative w-44 h-44 flex items-center justify-center">
+            <div className="absolute inset-0 rounded-full bg-[#34d399]/10 blur-2xl animate-glow-pulse" />
             <div className="absolute inset-0 rounded-full border-[3px] border-white/15 border-t-[#34d399] animate-spin" />
             <div className="w-[140px] h-[140px] rounded-full bg-white flex items-center justify-center shadow-[0_4px_18px_rgba(0,0,0,0.25)] overflow-hidden">
               <img
                 src={assetUrl('/splash-mark.png')}
                 alt="سیلانه سبز"
-                className="w-[78%] h-[78%] object-contain"
+                className="w-[78%] h-[78%] object-contain animate-float-soft"
               />
             </div>
           </div>
+          <span className="text-white/70 text-[12px] font-bold tracking-wide animate-pulse-subtle">
+            در حال آماده‌سازی فروشگاه...
+          </span>
         </div>
       </div>
     );
