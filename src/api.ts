@@ -84,6 +84,17 @@ function mapCustomer(c: ApiCustomer): Customer {
   };
 }
 
+export async function apiUpdateCustomerProfile(
+  customerId: string,
+  payload: { storeName?: string; ownerName?: string; phone?: string; address?: string },
+): Promise<Customer> {
+  const data = await request<{ customer: ApiCustomer }>(`/api/customers/${customerId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+  return mapCustomer(data.customer);
+}
+
 // Maps a real Customer to the AI-Studio UI's UserProfileData shape.
 // NOTE: creditLimit / creditUsed / licenseNumber / city do not exist in the
 // real backend yet (Customer table has no such columns). They default to 0/''

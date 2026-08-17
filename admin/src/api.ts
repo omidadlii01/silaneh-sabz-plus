@@ -147,6 +147,8 @@ export const dataApi = {
 
   // Customers
   listCustomers: () => request<{ customers: any[] }>('/api/admin/customers'),
+  getCustomerNotifications: (customerId: number) =>
+    request<{ notifications: any[] }>(`/api/admin/customers/${customerId}/notifications`),
   updateCustomer: (id: number, data: any) =>
     request<{ customer: any }>(`/api/admin/customers/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
 

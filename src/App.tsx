@@ -6,6 +6,7 @@ import {
   apiGetWeeklyOffers,
   apiGetOrders,
   apiCreateOrder,
+  apiUpdateCustomerProfile,
   deriveCategories,
   customerToProfile,
   customerToVisitorInfo,
@@ -95,8 +96,7 @@ export default function App() {
   // ------------------------------------------------------------------
   const [customer, setCustomer] = useState<Customer | null>(() => loadSession());
   const isLoggedIn = !!customer;
-  const [profileOverride, setProfileOverride] = useState<UserProfileData | null>(null);
-  const userProfile: UserProfileData = profileOverride || (customer ? customerToProfile(customer) : GUEST_PROFILE);
+  const userProfile: UserProfileData = customer ? customerToProfile(customer) : GUEST_PROFILE;
   const visitorInfo: VisitorInfo | null = customer ? customerToVisitorInfo(customer) : null;
 
   // Cart State
@@ -178,7 +178,6 @@ export default function App() {
   const handleLoginSuccess = (loggedInCustomer: Customer) => {
     saveSession(loggedInCustomer);
     setCustomer(loggedInCustomer);
-    setProfileOverride(null);
     setIsAuthOpen(false);
     showToast(`ورود با موفقیت انجام شد. خوش آمدید ${loggedInCustomer.ownerName}!`);
     refreshOrders(loggedInCustomer);
@@ -187,7 +186,6 @@ export default function App() {
   const handleLogout = () => {
     clearSession();
     setCustomer(null);
-    setProfileOverride(null);
     setOrders([]);
     setActiveTab('home');
   };
@@ -212,6 +210,26 @@ export default function App() {
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3000);
+  };
+
+  // Persists profile edits from ProfileView to the real backend, then
+  // updates the logged-in session so the change is reflected everywhere
+  // (and survives a refresh) instead of only living in local component state.
+  const handleUpdateProfile = async (updated: UserProfileData) => {
+    if (!customer) return;
+    try {
+      const updatedCustomer = await apiUpdateCustomerProfile(customer.id, {
+        storeName: updated.storeName,
+        ownerName: updated.ownerName,
+        phone: updated.phone,
+        address: updated.address,
+      });
+      setCustomer(updatedCustomer);
+      saveSession(updatedCustomer);
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'ذخیره اطلاعات با خطا مواجه شد.');
+      throw err;
+    }
   };
 
   // Helper to get item cart quantity in cartons
@@ -554,7 +572,7 @@ export default function App() {
           {activeTab === 'profile' && (
             <ProfileView
               profile={userProfile}
-              onUpdateProfile={(updated) => setProfileOverride(updated)}
+              onUpdateProfile={handleUpdateProfile}
               onOpenAuth={(mode) => {
                 setAuthMode(mode || 'login');
                 setIsAuthOpen(true);

@@ -418,6 +418,44 @@ export default {
         return json({ orders: ordersWithItems });
       }
 
+      // --- CUSTOMER: SELF-SERVICE PROFILE UPDATE ---
+      // (Public, same trust model as signup/login — no session infra exists
+      // yet. Matches the existing customer app security posture.)
+      const customerSelfUpdateMatch = path.match(/^\/api\/customers\/(\d+)$/);
+      if (customerSelfUpdateMatch && method === 'PATCH') {
+        const id = customerSelfUpdateMatch[1];
+        const body = await request.json<any>();
+        const { storeName, ownerName, firstName, lastName, phone, address } = body;
+
+        // ownerName from ProfileView is a single "first last" string; split
+        // it back out so first_name/last_name stay in sync for anywhere
+        // else in the system that reads them separately (admin panel, etc).
+        let fn = firstName;
+        let ln = lastName;
+        if (ownerName && !firstName && !lastName) {
+          const parts = String(ownerName).trim().split(/\s+/);
+          fn = parts[0] || '';
+          ln = parts.slice(1).join(' ') || '';
+        }
+
+        const fields: string[] = [];
+        const values: any[] = [];
+        if (storeName !== undefined) { fields.push('store_name = ?'); values.push(storeName); }
+        if (fn !== undefined) { fields.push('first_name = ?'); values.push(fn); }
+        if (ln !== undefined) { fields.push('last_name = ?'); values.push(ln); }
+        if (phone !== undefined) { fields.push('phone = ?'); values.push(phone); }
+        if (address !== undefined) { fields.push('address = ?'); values.push(address); }
+
+        if (fields.length === 0) return json({ error: 'داده‌ای برای بروزرسانی ارسال نشده است.' }, 400);
+
+        values.push(id);
+        await env.DB.prepare(`UPDATE customers SET ${fields.join(', ')} WHERE id = ?`).bind(...values).run();
+
+        const updated = await env.DB.prepare('SELECT * FROM customers WHERE id = ?').bind(id).first<any>();
+        if (!updated) return json({ error: 'مشتری یافت نشد.' }, 404);
+        return json({ customer: customerToJson(updated) });
+      }
+
       // --- CREATE ORDER (used by the customer app, and by the marketer app
       //     placing an order on behalf of a customer — marketerNote/marketerId
       //     are optional and only used in the latter case) ---
@@ -928,6 +966,20 @@ export default {
         }
         const updated = await env.DB.prepare('SELECT * FROM customers WHERE id = ?').bind(id).first<any>();
         return json({ customer: marketerCustomerToJson({ ...updated, total_orders_count: 0, total_spent: 0 }) });
+      }
+
+      // --- ADMIN: FULL ACTIVITY TIMELINE FOR ONE CUSTOMER (notifications:
+      // order placed, status changes, etc. -- everything the system has
+      // recorded happening on this account) ---
+      const adminCustomerNotificationsMatch = path.match(/^\/api\/admin\/customers\/(\d+)\/notifications$/);
+      if (adminCustomerNotificationsMatch && method === 'GET') {
+        const customerId = adminCustomerNotificationsMatch[1];
+        const rows = await env.DB.prepare(
+          `SELECT * FROM notifications WHERE recipient_type = 'customer' AND recipient_id = ? ORDER BY id DESC LIMIT 200`,
+        )
+          .bind(customerId)
+          .all();
+        return json({ notifications: (rows.results as any[]).map(notificationToJson) });
       }
 
       // --- ADMIN: CREATE A MARKETER DIRECTLY (active immediately) ---

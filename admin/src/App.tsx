@@ -11,6 +11,7 @@ import { RoleGuard } from './components/common/RoleGuard';
 import { DashboardPage } from './pages/DashboardPage';
 import { OrdersPage } from './pages/OrdersPage';
 import { CustomersPage } from './pages/CustomersPage';
+import { CustomerDetailPage } from './pages/CustomerDetailPage';
 import { MarketersPage } from './pages/MarketersPage';
 import { MarketerDetailPage } from './pages/MarketerDetailPage';
 import { ProductsPage } from './pages/ProductsPage';
@@ -81,6 +82,21 @@ function AppContent() {
             marketerId={mId}
             onNavigate={setCurrentPath}
             onOpenMarketerModal={(m) => setEditingMarketer({ show: true, marketer: m })}
+            onSelectOrder={setSelectedOrderId}
+          />
+        </RoleGuard>
+      );
+    }
+
+    if (currentPath.startsWith('/customers/')) {
+      const idStr = currentPath.split('/')[2];
+      const cId = Number(idStr);
+      return (
+        <RoleGuard path="/customers" onNavigate={setCurrentPath}>
+          <CustomerDetailPage
+            customerId={cId}
+            onNavigate={setCurrentPath}
+            onOpenCustomerModal={(c) => setEditingCustomer({ show: true, customer: c })}
             onSelectOrder={setSelectedOrderId}
           />
         </RoleGuard>

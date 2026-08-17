@@ -4,14 +4,14 @@ import { StatusBadge } from '../components/common/StatusBadge';
 import { EmptyState } from '../components/common/EmptyState';
 import { Breadcrumbs } from '../components/common/Breadcrumbs';
 import { Customer } from '../types';
-import { Users, Search, Plus, Store, Phone, MapPin, UserCheck, Edit2, RotateCcw, ArrowUpDown } from 'lucide-react';
+import { Users, Search, Plus, Store, Phone, MapPin, UserCheck, Edit2, RotateCcw, ArrowUpDown, Eye } from 'lucide-react';
 
 interface CustomersPageProps {
   onOpenCustomerModal: (customer?: Customer) => void;
   onNavigate: (path: string) => void;
 }
 
-export const CustomersPage: React.FC<CustomersPageProps> = ({ onOpenCustomerModal }) => {
+export const CustomersPage: React.FC<CustomersPageProps> = ({ onOpenCustomerModal, onNavigate }) => {
   const { customers, marketers, updateCustomerMarketer, updateCustomerStatus } = useData();
   const [searchQuery, setSearchQuery] = useState('');
   const [bizFilter, setBizFilter] = useState('all');
@@ -149,9 +149,13 @@ export const CustomersPage: React.FC<CustomersPageProps> = ({ onOpenCustomerModa
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {filteredCustomers.map(cust => (
-                  <tr key={cust.id} className="hover:bg-slate-50 transition-colors">
+                  <tr
+                    key={cust.id}
+                    className="hover:bg-emerald-50/40 transition-colors cursor-pointer"
+                    onClick={() => onNavigate(`/customers/${cust.id}`)}
+                  >
                     <td className="p-3.5 font-bold text-slate-800">{cust.customer_code}</td>
-                    <td className="p-3.5 font-bold text-[#0F5338]">{cust.store_name}</td>
+                    <td className="p-3.5 font-bold text-[#0F5338] hover:underline">{cust.store_name}</td>
                     <td className="p-3.5">
                       <StatusBadge type="business" value={cust.business_type} size="sm" />
                     </td>
@@ -161,7 +165,7 @@ export const CustomersPage: React.FC<CustomersPageProps> = ({ onOpenCustomerModa
                     </td>
 
                     {/* Inline Marketer Change Dropdown */}
-                    <td className="p-3.5">
+                    <td className="p-3.5" onClick={(e) => e.stopPropagation()}>
                       <select
                         value={cust.marketer_id}
                         onChange={e => updateCustomerMarketer(cust.id, Number(e.target.value))}
@@ -190,7 +194,7 @@ export const CustomersPage: React.FC<CustomersPageProps> = ({ onOpenCustomerModa
                           })
                         : '—'}
                     </td>
-                    <td className="p-3.5 text-center">
+                    <td className="p-3.5 text-center" onClick={(e) => e.stopPropagation()}>
                       <button
                         onClick={() => updateCustomerStatus(cust.id, !cust.active)}
                         className="cursor-pointer hover:opacity-80 transition-opacity"
@@ -199,14 +203,23 @@ export const CustomersPage: React.FC<CustomersPageProps> = ({ onOpenCustomerModa
                         <StatusBadge type="active" value={cust.active} size="sm" />
                       </button>
                     </td>
-                    <td className="p-3.5 text-center">
-                      <button
-                        onClick={() => onOpenCustomerModal(cust)}
-                        className="p-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors"
-                        title="ویرایش اطلاعات"
-                      >
-                        <Edit2 className="w-3.5 h-3.5" />
-                      </button>
+                    <td className="p-3.5 text-center" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center justify-center gap-1.5">
+                        <button
+                          onClick={() => onNavigate(`/customers/${cust.id}`)}
+                          className="p-1.5 rounded-lg bg-emerald-50 text-[#006c4a] hover:bg-emerald-100 transition-colors"
+                          title="مشاهده جزئیات کامل حساب"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => onOpenCustomerModal(cust)}
+                          className="p-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors"
+                          title="ویرایش اطلاعات"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

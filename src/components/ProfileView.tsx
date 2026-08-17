@@ -4,7 +4,7 @@ import { formatPrice, toPersianDigits } from '../utils/persian';
 
 interface ProfileViewProps {
   profile: UserProfileData;
-  onUpdateProfile: (updated: UserProfileData) => void;
+  onUpdateProfile: (updated: UserProfileData) => Promise<void>;
   onOpenAuth?: (mode?: 'login' | 'register') => void;
   onLogout?: () => void;
 }
@@ -13,16 +13,26 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ profile, onUpdateProfi
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<UserProfileData>(profile);
   const [saveAlert, setSaveAlert] = useState(false);
+  const [saveError, setSaveError] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
   const [logoutAlert, setLogoutAlert] = useState(false);
 
   const availableCredit = profile.creditLimit - profile.creditUsed;
   const creditUsedPercent = profile.creditLimit > 0 ? Math.round((profile.creditUsed / profile.creditLimit) * 100) : 0;
 
   const handleSave = () => {
-    onUpdateProfile(formData);
-    setIsEditing(false);
-    setSaveAlert(true);
-    setTimeout(() => setSaveAlert(false), 3000);
+    setIsSaving(true);
+    setSaveError('');
+    onUpdateProfile(formData)
+      .then(() => {
+        setIsEditing(false);
+        setSaveAlert(true);
+        setTimeout(() => setSaveAlert(false), 3000);
+      })
+      .catch(() => {
+        setSaveError('ذخیره اطلاعات با خطا مواجه شد. لطفاً دوباره تلاش کنید.');
+      })
+      .finally(() => setIsSaving(false));
   };
 
   const handleLogout = () => {
@@ -56,7 +66,11 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ profile, onUpdateProfi
           </div>
 
           <button
-            onClick={() => setIsEditing(!isEditing)}
+            onClick={() => {
+              if (!isEditing) setFormData(profile);
+              setSaveError('');
+              setIsEditing(!isEditing);
+            }}
             className="py-1.5 px-3 border border-[#bec9c2] text-[#006c4a] rounded-xl text-[11px] font-bold hover:bg-[#f0f4f8] transition-colors"
           >
             {isEditing ? 'انصراف' : 'ویرایش اطلاعات'}
@@ -150,11 +164,19 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ profile, onUpdateProfi
             />
           </div>
 
+          {saveError && (
+            <div className="bg-[#fef2f2] text-[#dc2626] p-2.5 rounded-xl text-[12px] font-bold flex items-center gap-1.5">
+              <span className="material-symbols-outlined text-[18px]">error</span>
+              {saveError}
+            </div>
+          )}
+
           <button
             onClick={handleSave}
-            className="w-full bg-[#0F5338] hover:bg-[#004532] text-white py-3 rounded-xl font-bold text-[13px] mt-2 active:scale-95 transition-all shadow-xs"
+            disabled={isSaving}
+            className="w-full bg-[#0F5338] hover:bg-[#004532] text-white py-3 rounded-xl font-bold text-[13px] mt-2 active:scale-95 transition-all shadow-xs disabled:opacity-60"
           >
-            ذخیره تغییرات
+            {isSaving ? 'در حال ذخیره...' : 'ذخیره تغییرات'}
           </button>
         </div>
       ) : (
