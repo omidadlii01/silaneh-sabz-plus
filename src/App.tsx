@@ -589,6 +589,7 @@ export default function App() {
         <NotificationsModal
           isOpen={isNotificationsOpen}
           onClose={() => setIsNotificationsOpen(false)}
+          customerId={customer?.id}
         />
 
         <SearchOverlay

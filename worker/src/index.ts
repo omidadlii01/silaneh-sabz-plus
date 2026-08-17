@@ -180,6 +180,24 @@ function notificationToJson(n: any) {
   };
 }
 
+// Customer app uses camelCase and a slightly different shape (matches the
+// NotificationItem interface in src/components/NotificationsModal.tsx).
+function customerNotificationToJson(n: any) {
+  return {
+    id: String(n.id),
+    category: n.category || 'orders',
+    title: n.title || '',
+    body: n.message,
+    time: n.created_at,
+    unread: !n.is_read,
+    icon: n.icon || 'notifications',
+    amount: n.amount || undefined,
+    badgeText: n.badge_text || undefined,
+    badgeColor: n.badge_color || undefined,
+    relatedOrderId: n.related_order_id || undefined,
+  };
+}
+
 function marketerCustomerToJson(c: any) {
   return {
     id: c.id,
@@ -456,6 +474,19 @@ export default {
             .run();
         }
 
+        // Confirmation notification for the customer themselves.
+        await env.DB.prepare(
+          `INSERT INTO notifications (recipient_type, recipient_id, type, category, related_order_id, title, message, icon, badge_text, badge_color)
+           VALUES ('customer', ?, 'order_status_change', 'orders', ?, ?, ?, 'receipt_long', 'ثبت‌شده', 'bg-[#f8fafc] text-[#475569] border-[#cbd5e1]')`,
+        )
+          .bind(
+            customerId,
+            orderId,
+            `سفارش شماره SB-${orderId} با موفقیت ثبت شد`,
+            `سفارش شما به ارزش ${Number(finalAmount).toLocaleString('fa-IR')} تومان ثبت شد و در حال بررسی است.`,
+          )
+          .run();
+
         return json({ orderId, orderNumber: genOrderNumber() }, 201);
       }
 
@@ -650,6 +681,38 @@ export default {
       if (notificationReadMatch && method === 'PATCH') {
         const id = notificationReadMatch[1];
         await env.DB.prepare('UPDATE notifications SET is_read = 1 WHERE id = ?').bind(id).run();
+        return json({ ok: true });
+      }
+
+      // --- DELETE NOTIFICATION (either app) ---
+      const notificationDeleteMatch = path.match(/^\/api\/notifications\/(\d+)$/);
+      if (notificationDeleteMatch && method === 'DELETE') {
+        const id = notificationDeleteMatch[1];
+        await env.DB.prepare('DELETE FROM notifications WHERE id = ?').bind(id).run();
+        return json({ ok: true });
+      }
+
+      // --- CUSTOMER: LIST OWN NOTIFICATIONS ---
+      const customerNotificationsMatch = path.match(/^\/api\/customers\/(\d+)\/notifications$/);
+      if (customerNotificationsMatch && method === 'GET') {
+        const customerId = customerNotificationsMatch[1];
+        const rows = await env.DB.prepare(
+          `SELECT * FROM notifications WHERE recipient_type = 'customer' AND recipient_id = ? ORDER BY id DESC LIMIT 200`,
+        )
+          .bind(customerId)
+          .all();
+        return json({ notifications: (rows.results as any[]).map(customerNotificationToJson) });
+      }
+
+      // --- CUSTOMER: MARK ALL OWN NOTIFICATIONS READ ---
+      const customerNotificationsReadAllMatch = path.match(/^\/api\/customers\/(\d+)\/notifications\/read-all$/);
+      if (customerNotificationsReadAllMatch && method === 'PATCH') {
+        const customerId = customerNotificationsReadAllMatch[1];
+        await env.DB.prepare(
+          `UPDATE notifications SET is_read = 1 WHERE recipient_type = 'customer' AND recipient_id = ?`,
+        )
+          .bind(customerId)
+          .run();
         return json({ ok: true });
       }
 
@@ -923,6 +986,37 @@ export default {
               orderId,
               'وضعیت سفارش تغییر کرد',
               `سفارش «${updatedOrder.store_name}» به وضعیت «${persianStatus}» تغییر یافت.`,
+            )
+            .run();
+        }
+
+        if (updatedOrder?.customer_id) {
+          const STATUS_ICON: Record<string, string> = {
+            'ثبت‌شده': 'receipt_long',
+            'در حال پردازش': 'inventory_2',
+            'ارسال‌شده': 'local_shipping',
+            'تحویل‌شده': 'task_alt',
+            'لغو‌شده': 'cancel',
+          };
+          const STATUS_BADGE_COLOR: Record<string, string> = {
+            'ثبت‌شده': 'bg-[#f8fafc] text-[#475569] border-[#cbd5e1]',
+            'در حال پردازش': 'bg-[#eff6ff] text-[#2563eb] border-[#2563eb]/30',
+            'ارسال‌شده': 'bg-[#eff6ff] text-[#2563eb] border-[#2563eb]/30',
+            'تحویل‌شده': 'bg-[#ecfdf5] text-[#006c4a] border-[#006c4a]/30',
+            'لغو‌شده': 'bg-[#fef2f2] text-[#dc2626] border-[#dc2626]/30',
+          };
+          await env.DB.prepare(
+            `INSERT INTO notifications (recipient_type, recipient_id, type, category, related_order_id, title, message, icon, badge_text, badge_color)
+             VALUES ('customer', ?, 'order_status_change', 'orders', ?, ?, ?, ?, ?, ?)`,
+          )
+            .bind(
+              updatedOrder.customer_id,
+              orderId,
+              `سفارش شماره SB-${orderId} به‌روزرسانی شد`,
+              `وضعیت سفارش شما به «${persianStatus}» تغییر یافت.`,
+              STATUS_ICON[persianStatus] || 'local_shipping',
+              persianStatus,
+              STATUS_BADGE_COLOR[persianStatus] || 'bg-[#f8fafc] text-[#475569] border-[#cbd5e1]',
             )
             .run();
         }

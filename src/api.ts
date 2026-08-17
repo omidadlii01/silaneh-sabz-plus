@@ -396,6 +396,41 @@ export async function apiCreateOrder(payload: {
 }
 
 // ---------------------------------------------------------------------------
+// Notifications
+// ---------------------------------------------------------------------------
+
+export interface ApiNotification {
+  id: string;
+  category: 'orders' | 'wallet' | 'offers' | 'products' | string;
+  title: string;
+  body: string;
+  time: string;
+  unread: boolean;
+  icon: string;
+  amount?: string;
+  badgeText?: string;
+  badgeColor?: string;
+  relatedOrderId?: number;
+}
+
+export async function apiGetNotifications(customerId: string): Promise<ApiNotification[]> {
+  const data = await request<{ notifications: ApiNotification[] }>(`/api/customers/${customerId}/notifications`);
+  return data.notifications;
+}
+
+export async function apiMarkNotificationRead(notificationId: string): Promise<void> {
+  await request(`/api/notifications/${notificationId}/read`, { method: 'PATCH' });
+}
+
+export async function apiMarkAllNotificationsRead(customerId: string): Promise<void> {
+  await request(`/api/customers/${customerId}/notifications/read-all`, { method: 'PATCH' });
+}
+
+export async function apiDeleteNotification(notificationId: string): Promise<void> {
+  await request(`/api/notifications/${notificationId}`, { method: 'DELETE' });
+}
+
+// ---------------------------------------------------------------------------
 // Local session persistence (kept simple, mirrors the previous app's pattern)
 // ---------------------------------------------------------------------------
 

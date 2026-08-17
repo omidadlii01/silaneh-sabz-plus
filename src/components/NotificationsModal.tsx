@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { apiGetNotifications, apiMarkNotificationRead, apiMarkAllNotificationsRead, apiDeleteNotification, ApiNotification } from '../api';
 
 interface NotificationsModalProps {
   isOpen: boolean;
   onClose: () => void;
+  customerId?: string;
 }
 
 type CategoryType = 'all' | 'orders' | 'wallet' | 'offers' | 'products';
@@ -21,94 +23,53 @@ interface NotificationItem {
   badgeColor?: string;
 }
 
-const INITIAL_NOTIFICATIONS: NotificationItem[] = [
-  {
-    id: 'n1',
-    category: 'offers',
-    title: 'دریافت اعتبار هدیه ثبت‌نام',
-    body: 'مبلغ ۵۰۰,۰۰۰ تومان اعتبار هدیه به کیف پول شما افزوده شد. می‌توانید در خرید بعدی از آن استفاده کنید.',
-    time: '۱۱ مرداد ۱۴۰۵ - ۱۰:۱۵',
-    unread: true,
-    icon: 'card_giftcard',
-    amount: '+۵۰۰,۰۰۰ تومان',
-    badgeText: 'اعتبار هدیه',
-    badgeColor: 'bg-[#ecfdf5] text-[#006c4a] border-[#006c4a]/30',
-  },
-  {
-    id: 'n2',
-    category: 'orders',
-    title: 'سفارش شماره SLN-۴۰۳۰۸۱۲ بارگیری شد',
-    body: 'سفارش کارتنی شما تحویل موزع منطقه گردید و حداکثر تا عصر امروز به مقصد تحویل داده می‌شود.',
-    time: '۱۰ مرداد ۱۴۰۵ - ۱۶:۴۵',
-    unread: true,
-    icon: 'local_shipping',
-    badgeText: 'تحویل موزع',
-    badgeColor: 'bg-[#eff6ff] text-[#2563eb] border-[#2563eb]/30',
-  },
-  {
-    id: 'n3',
-    category: 'wallet',
-    title: 'افزایش موجودی کیف پول',
-    body: 'مبلغ ۲,۵۰۰,۰۰۰ تومان بابت برگشت بدهی پکیج قبلی به کیف پول حساب تجاری شما واریز شد.',
-    time: '۰۸ مرداد ۱۴۰۵ - ۱۲:۳۰',
-    unread: false,
-    icon: 'account_balance_wallet',
-    amount: '+۲,۵۰۰,۰۰۰ تومان',
-    badgeText: 'واریز به کیف پول',
-    badgeColor: 'bg-[#ecfdf5] text-[#006c4a] border-[#006c4a]/30',
-  },
-  {
-    id: 'n4',
-    category: 'products',
-    title: 'تخفیف ویژه ۲۷٪ محصولات کامان و کدکس',
-    body: 'جشنواره تخفیفات تابستانه سیلانه سبز فعال شد. با ثبت سفارش کارتنی بالای ۵۰ کارتن از ۱۰٪ تخفیف مازاد بهره‌مند شوید.',
-    time: '۰۷ مرداد ۱۴۰۵ - ۰۹:۰۰',
-    unread: false,
-    icon: 'sell',
-    badgeText: 'جشنواره فروش',
-    badgeColor: 'bg-[#fef2f2] text-[#dc2626] border-[#dc2626]/30',
-  },
-  {
-    id: 'n5',
-    category: 'orders',
-    title: 'تأیید فاکتور رسمی سفارش SLN-۴۰۳۰۷۹۰',
-    body: 'فاکتور رسمی سفارش شما توسط واحد حسابداری سیلانه سبز صادر و فایل PDF آن آماده دانلود است.',
-    time: '۰۵ مرداد ۱۴۰۵ - ۱۴:۲۰',
-    unread: false,
-    icon: 'receipt_long',
-    badgeText: 'فاکتور رسمی',
-    badgeColor: 'bg-[#f8fafc] text-[#475569] border-[#cbd5e1]',
-  },
-  {
-    id: 'n6',
-    category: 'offers',
-    title: 'جشنواره قرعه‌کشی داروخانه‌های برتر',
-    body: 'با خرید هر ۱۰ کارتن از برندهای چین‌چین و ربیع، یک شانس در قرعه‌کشی جوایز ویژه پایان ماه دریافت کنید.',
-    time: '۰۲ مرداد ۱۴۰۵ - ۱۱:۱۰',
-    unread: false,
-    icon: 'military_tech',
-    badgeText: 'قرعه‌کشی',
-    badgeColor: 'bg-[#fffbe2] text-[#b45309] border-[#fde047]',
-  },
-  {
-    id: 'n7',
-    category: 'products',
-    title: 'موجودی جدید دستمال مرطوب و خمیردندان',
-    body: 'محصولات پرفروش پنسن و دنتامکس مجدداً شارژ شدند. می‌توانید هم‌اکنون سفارش خود را ثبت کنید.',
-    time: '۲۸ تیر ۱۴۰۵ - ۰۸:۴۵',
-    unread: false,
-    icon: 'inventory_2',
-    badgeText: 'شارژ موجودی',
-    badgeColor: 'bg-[#f0fdf4] text-[#16a34a] border-[#16a34a]/30',
-  },
-];
+function formatNotificationTime(iso: string): string {
+  try {
+    const d = new Date(iso.includes('T') || iso.includes('Z') ? iso : iso.replace(' ', 'T') + 'Z');
+    return new Intl.DateTimeFormat('fa-IR-u-ca-persian', {
+      day: 'numeric',
+      month: 'long',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(d);
+  } catch {
+    return iso;
+  }
+}
 
-export const NotificationsModal: React.FC<NotificationsModalProps> = ({ isOpen, onClose }) => {
+function mapApiNotification(n: ApiNotification): NotificationItem {
+  return {
+    id: n.id,
+    category: (['orders', 'wallet', 'offers', 'products'].includes(n.category) ? n.category : 'orders') as CategoryType,
+    title: n.title,
+    body: n.body,
+    time: formatNotificationTime(n.time),
+    unread: n.unread,
+    icon: n.icon,
+    amount: n.amount,
+    badgeText: n.badgeText,
+    badgeColor: n.badgeColor,
+  };
+}
+
+export const NotificationsModal: React.FC<NotificationsModalProps> = ({ isOpen, onClose, customerId }) => {
   const [activeTab, setActiveTab] = useState<CategoryType>('all');
-  const [notifications, setNotifications] = useState<NotificationItem[]>(INITIAL_NOTIFICATIONS);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
   const [canScrollRight, setCanScrollRight] = useState(false);
   const [canScrollLeft, setCanScrollLeft] = useState(true);
   const tabsRef = React.useRef<HTMLDivElement>(null);
+
+  const loadNotifications = useCallback(() => {
+    if (!customerId) return;
+    setIsLoading(true);
+    setError('');
+    apiGetNotifications(customerId)
+      .then((data) => setNotifications(data.map(mapApiNotification)))
+      .catch(() => setError('دریافت پیام‌ها با خطا مواجه شد.'))
+      .finally(() => setIsLoading(false));
+  }, [customerId]);
 
   const checkScroll = () => {
     if (!tabsRef.current) return;
@@ -124,8 +85,9 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({ isOpen, 
   useEffect(() => {
     if (isOpen) {
       setTimeout(checkScroll, 100);
+      loadNotifications();
     }
-  }, [isOpen]);
+  }, [isOpen, loadNotifications]);
 
   if (!isOpen) return null;
 
@@ -147,17 +109,25 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({ isOpen, 
 
   const handleMarkAllRead = () => {
     setNotifications((prev) => prev.map((item) => ({ ...item, unread: false })));
+    if (customerId) apiMarkAllNotificationsRead(customerId).catch(() => loadNotifications());
   };
 
   const handleToggleRead = (id: string) => {
+    const target = notifications.find((n) => n.id === id);
     setNotifications((prev) =>
       prev.map((item) => (item.id === id ? { ...item, unread: !item.unread } : item))
     );
+    // Backend only supports marking as read (not un-reading); on the "mark
+    // as read" direction, persist it. Toggling back to unread is local-only.
+    if (target?.unread) {
+      apiMarkNotificationRead(id).catch(() => loadNotifications());
+    }
   };
 
   const handleDeleteNotification = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     setNotifications((prev) => prev.filter((item) => item.id !== id));
+    apiDeleteNotification(id).catch(() => loadNotifications());
   };
 
   const filteredNotifications =
@@ -171,6 +141,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({ isOpen, 
     if (tabId === 'all') return totalUnread;
     return notifications.filter((item) => item.category === tabId && item.unread).length;
   };
+
 
   return (
     <div className="fixed inset-0 z-50 bg-white max-w-[448px] mx-auto flex flex-col h-full animate-in fade-in duration-200 text-right overflow-hidden border-x border-[#e2e8f0]/60">
@@ -284,7 +255,22 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({ isOpen, 
         className="flex-1 overflow-y-auto px-4 py-4 space-y-3 bg-[#f8fafc]"
         style={{ paddingBottom: 'calc(5rem + env(safe-area-inset-bottom))' }}
       >
-        {filteredNotifications.length > 0 ? (
+        {isLoading ? (
+          <div className="text-center py-16">
+            <span className="material-symbols-outlined text-[36px] text-[#006c4a] animate-spin">progress_activity</span>
+          </div>
+        ) : error ? (
+          <div className="text-center py-16 bg-white rounded-2xl border border-dashed border-[#fda4af] p-6 mt-4">
+            <span className="material-symbols-outlined text-[48px] text-[#dc2626] mb-2">error</span>
+            <p className="text-[14px] font-bold text-[#475569] mb-3">{error}</p>
+            <button
+              onClick={loadNotifications}
+              className="text-[12px] font-bold text-white bg-[#006c4a] px-4 py-2 rounded-lg"
+            >
+              تلاش مجدد
+            </button>
+          </div>
+        ) : filteredNotifications.length > 0 ? (
           filteredNotifications.map((n) => (
             <div
               key={n.id}
