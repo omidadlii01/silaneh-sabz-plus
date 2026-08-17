@@ -381,7 +381,7 @@ export default function App() {
     // main.tsx removes #app-splash as soon as React mounts — before the
     // catalog has actually finished loading from the API.
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-[#0f5338] to-[#0a3d29]">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#10b981] via-[#059669] to-[#022c22]">
         <div className="flex flex-col items-center gap-5">
           <div className="relative w-44 h-44 flex items-center justify-center">
             <div className="absolute inset-0 rounded-full bg-[#34d399]/10 blur-2xl animate-glow-pulse" />

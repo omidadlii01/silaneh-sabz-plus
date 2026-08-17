@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { toPersianDigits } from '../utils/persian';
 import { apiLogin, apiSignup, Customer, BusinessType } from '../api';
+import logoMark from '../assets/logo-mark-transparent.png';
 
 interface AuthViewProps {
   onLoginSuccess: (customer: Customer) => void;
@@ -162,7 +163,7 @@ export const AuthView: React.FC<AuthViewProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-[#002e21] flex flex-col items-center justify-between px-4 overflow-y-auto selection:bg-[#34d399] selection:text-[#002e21] text-right font-['Vazirmatn']"
+      className="fixed inset-0 z-50 bg-gradient-to-br from-[#10b981] via-[#059669] to-[#022c22] flex flex-col items-center justify-between px-4 overflow-y-auto selection:bg-[#34d399] selection:text-[#002e21] text-right font-['Vazirmatn']"
       style={{
         paddingTop: 'calc(1rem + env(safe-area-inset-top))',
         paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))',
@@ -176,13 +177,18 @@ export const AuthView: React.FC<AuthViewProps> = ({
       <div className="w-full max-w-[420px] my-auto flex flex-col items-center z-10 py-6">
         {/* Seylaneh Sabz Official Brand Logo matching the user's uploaded image */}
         <div className="flex flex-col items-center mb-6 text-center">
-          <div className="flex items-center justify-center gap-3.5 mb-2 py-1 px-3 drop-shadow-md" dir="ltr">
-            {/* Left Wing / Leaf / Drop Logo Symbol */}
-            <svg viewBox="0 0 160 85" className="w-16 h-12 fill-white shrink-0">
-              <path d="M70 14 C50 0 22 8 6 34 C25 32 40 44 54 58 C58 62 62 66 62 66 C62 66 66 62 70 58 C84 44 98 32 118 34 C102 8 74 0 70 14 Z" />
-              <path d="M62 66 C52 52 30 46 16 66 C32 66 44 76 56 84 C60 87 60 87 60 87 C60 87 60 87 64 84 C76 76 88 66 104 66 C90 46 68 52 62 66 Z" />
-              <path d="M62 18 C58 28 52 36 52 42 C52 48 56 52 62 52 C68 52 72 48 72 42 C72 36 66 28 62 18 Z" />
-            </svg>
+          <div className="flex items-center justify-center gap-3.5 mb-2 py-1 px-3" dir="ltr">
+            {/* Header logo mark, background removed, styled to look etched into the background */}
+            <img
+              src={logoMark}
+              alt="سیلانه سبز"
+              className="w-16 h-11 object-contain opacity-95 shrink-0"
+              style={{
+                filter:
+                  'brightness(0) invert(1) drop-shadow(0 1px 0 rgba(255,255,255,0.35)) drop-shadow(0 -1.5px 2px rgba(0,0,0,0.45))',
+                mixBlendMode: 'soft-light',
+              }}
+            />
 
             {/* Right Side English Text Stack */}
             <div className="text-left flex flex-col justify-center leading-none text-white tracking-widest font-sans border-l-2 border-white/30 pl-3.5">
@@ -221,7 +227,7 @@ export const AuthView: React.FC<AuthViewProps> = ({
                   }}
                   className={`flex-1 py-2.5 rounded-xl font-black text-[13px] transition-all duration-200 flex items-center justify-center gap-2 ${
                     mode === 'login'
-                      ? 'bg-[#004532] text-white shadow-md'
+                      ? 'bg-gradient-to-r from-[#10b981] via-[#059669] to-[#047857] text-white shadow-md shadow-[#059669]/30 border border-white/40 ring-2 ring-[#059669]/20 backdrop-blur-md'
                       : 'text-[#526058] hover:text-[#002e21]'
                   }`}
                 >
@@ -237,7 +243,7 @@ export const AuthView: React.FC<AuthViewProps> = ({
                   }}
                   className={`flex-1 py-2.5 rounded-xl font-black text-[13px] transition-all duration-200 flex items-center justify-center gap-2 ${
                     mode === 'register'
-                      ? 'bg-[#004532] text-white shadow-md'
+                      ? 'bg-gradient-to-r from-[#10b981] via-[#059669] to-[#047857] text-white shadow-md shadow-[#059669]/30 border border-white/40 ring-2 ring-[#059669]/20 backdrop-blur-md'
                       : 'text-[#526058] hover:text-[#002e21]'
                   }`}
                 >
@@ -292,7 +298,7 @@ export const AuthView: React.FC<AuthViewProps> = ({
                   <button
                     type="submit"
                     disabled={isLoading}
-                    className="w-full py-3.5 bg-[#004532] hover:bg-[#022c22] text-white font-black text-[14px] rounded-2xl shadow-md transition-all active:scale-[0.98] flex items-center justify-center gap-2 border border-[#059669]/20"
+                    className="w-full py-3.5 bg-gradient-to-r from-[#10b981] via-[#059669] to-[#047857] hover:from-[#34d399] hover:to-[#059669] text-white font-black text-[14px] rounded-2xl shadow-lg shadow-[#059669]/30 transition-all active:scale-[0.98] flex items-center justify-center gap-2 border border-white/40 ring-2 ring-[#059669]/20 backdrop-blur-md"
                   >
                     {isLoading ? (
                       <span className="material-symbols-outlined text-[20px] animate-spin">
@@ -417,9 +423,9 @@ export const AuthView: React.FC<AuthViewProps> = ({
                   <button
                     type="submit"
                     disabled={isLoading || !agreedTerms}
-                    className={`w-full py-3.5 font-black text-[13.5px] rounded-2xl shadow-md transition-all flex items-center justify-center gap-2 ${
+                    className={`w-full py-3.5 font-black text-[13.5px] rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2 ${
                       agreedTerms && !isLoading
-                        ? 'bg-[#004532] hover:bg-[#022c22] text-white active:scale-[0.98]'
+                        ? 'bg-gradient-to-r from-[#10b981] via-[#059669] to-[#047857] hover:from-[#34d399] hover:to-[#059669] text-white active:scale-[0.98] shadow-[#059669]/30 border border-white/40 ring-2 ring-[#059669]/20 backdrop-blur-md'
                         : 'bg-[#cbd5e1] text-[#64748b] cursor-not-allowed'
                     }`}
                   >
@@ -480,7 +486,7 @@ export const AuthView: React.FC<AuthViewProps> = ({
               <button
                 onClick={() => handleVerifyOtp()}
                 disabled={isLoading}
-                className="w-full py-3.5 bg-[#004532] hover:bg-[#022c22] text-white font-black text-[14px] rounded-2xl shadow-md transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                className="w-full py-3.5 bg-gradient-to-r from-[#10b981] via-[#059669] to-[#047857] hover:from-[#34d399] hover:to-[#059669] text-white font-black text-[14px] rounded-2xl shadow-lg shadow-[#059669]/30 transition-all active:scale-[0.98] flex items-center justify-center gap-2 border border-white/40 ring-2 ring-[#059669]/20 backdrop-blur-md"
               >
                 {isLoading ? (
                   <span className="material-symbols-outlined text-[20px] animate-spin">
