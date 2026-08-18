@@ -19,6 +19,7 @@ export function usePushNotifications(customerId: string | undefined) {
 
     let registrationListener: { remove: () => void } | undefined;
     let errorListener: { remove: () => void } | undefined;
+    let actionListener: { remove: () => void } | undefined;
 
     (async () => {
       try {
@@ -36,6 +37,26 @@ export function usePushNotifications(customerId: string | undefined) {
         });
         errorListener = await PushNotifications.addListener('registrationError', () => {});
 
+        // If the notification carries a `url` in its data payload (e.g. the
+        // admin sent an "update available" push with the APK download
+        // link), open it in the system browser when the user taps it —
+        // this app has no in-app auto-updater, so this is how a tap turns
+        // into an actual download.
+        actionListener = await PushNotifications.addListener(
+          'pushNotificationActionPerformed',
+          async (action) => {
+            const url = action?.notification?.data?.url as string | undefined;
+            if (url) {
+              try {
+                const { Browser } = await import('@capacitor/browser');
+                await Browser.open({ url });
+              } catch {
+                window.open(url, '_blank');
+              }
+            }
+          },
+        );
+
         await PushNotifications.register();
       } catch {
         // Plugin unavailable -- push notifications are a non-critical
@@ -46,6 +67,7 @@ export function usePushNotifications(customerId: string | undefined) {
     return () => {
       registrationListener?.remove();
       errorListener?.remove();
+      actionListener?.remove();
     };
   }, [customerId]);
 }

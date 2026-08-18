@@ -17,6 +17,7 @@ export const NotificationsPage: React.FC = () => {
     'برای بروزرسانی به آخرین امکانات، از طریق لینک دانلود مستقیم، نسخه جدید را نصب کنید.',
   );
   const [audience, setAudience] = useState<Audience>('all');
+  const [isUpdateNotice, setIsUpdateNotice] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState('');
   const [result, setResult] = useState<SendResult | null>(null);
@@ -37,7 +38,13 @@ export const NotificationsPage: React.FC = () => {
     setIsSending(true);
     setError('');
     try {
-      const res = await dataApi.sendPush(title.trim(), message.trim(), audience);
+      const res = await dataApi.sendPush(title.trim(), message.trim(), audience, {
+        imageUrl: 'https://omidadlii01.github.io/silaneh-sabz-plus/logo-full.png',
+        color: '#059669',
+        ...(isUpdateNotice
+          ? { url: 'https://github.com/omidadlii01/silaneh-sabz-plus/releases/download/latest/silaneh-sabz-plus.apk' }
+          : {}),
+      });
       setResult(res);
     } catch (e: any) {
       setError(e.message || 'ارسال نوتیفیکیشن با خطا مواجه شد.');
@@ -107,6 +114,25 @@ export const NotificationsPage: React.FC = () => {
               فقط مشتریان وارد شده
             </button>
           </div>
+        </div>
+
+        <div>
+          <label className="flex items-center gap-2.5 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 cursor-pointer hover:bg-slate-100 transition-all">
+            <input
+              type="checkbox"
+              checked={isUpdateNotice}
+              onChange={(e) => setIsUpdateNotice(e.target.checked)}
+              className="w-4 h-4 accent-[#006c4a]"
+            />
+            <div>
+              <span className="text-xs font-bold text-slate-700 block">
+                این اطلاعیه درباره‌ی نسخه‌ی جدید اپلیکیشن است
+              </span>
+              <span className="text-[11px] text-slate-500">
+                با تیک زدن این گزینه، لمس نوتیفیکیشن روی گوشی کاربر مستقیماً صفحه‌ی دانلود APK را باز می‌کند.
+              </span>
+            </div>
+          </label>
         </div>
 
         {error && (

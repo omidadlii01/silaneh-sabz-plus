@@ -971,7 +971,7 @@ export default {
       // --- ADMIN: SEND PUSH NOTIFICATION (broadcast, e.g. "new app version") ---
       if (path === '/api/admin/push/send' && method === 'POST') {
         const body = await request.json<any>();
-        const { title, message, audience, imageUrl, color } = body;
+        const { title, message, audience, imageUrl, color, url } = body;
         if (!title || !message) return json({ error: 'عنوان و متن پیام الزامی است.' }, 400);
 
         const fcmAuth = await getFcmAccessToken(env);
@@ -987,10 +987,15 @@ export default {
         const staleTokens: string[] = [];
 
         for (const t of tokens) {
-          const result = await sendFcmMessage(fcmAuth.accessToken, fcmAuth.projectId, t, title, message, undefined, {
-            imageUrl,
-            color,
-          });
+          const result = await sendFcmMessage(
+            fcmAuth.accessToken,
+            fcmAuth.projectId,
+            t,
+            title,
+            message,
+            url ? { url } : undefined,
+            { imageUrl, color },
+          );
           if (result.ok) {
             successCount++;
           } else {
