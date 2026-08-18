@@ -19,6 +19,7 @@ import { BrandsPage } from './pages/BrandsPage';
 import { OffersPage } from './pages/OffersPage';
 import { ReportsPage } from './pages/ReportsPage';
 import { AdminUsersPage } from './pages/AdminUsersPage';
+import { NotificationsPage } from './pages/NotificationsPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { AuthPage } from './pages/AuthPage';
 
@@ -187,6 +188,13 @@ function AppContent() {
             <AdminUsersPage
               onOpenApproveModal={(user) => setApprovingAdminUser(user)}
             />
+          </RoleGuard>
+        );
+
+      case '/notifications':
+        return (
+          <RoleGuard path="/notifications" onNavigate={setCurrentPath}>
+            <NotificationsPage />
           </RoleGuard>
         );
 

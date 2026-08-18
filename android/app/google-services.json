@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "129203293596",
+    "project_id": "silaneh-sabz-plus-b711b",
+    "storage_bucket": "silaneh-sabz-plus-b711b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:129203293596:android:b16dda6e64fd5016f8cc59",
+        "android_client_info": {
+          "package_name": "com.silaneh.sabzplus"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAN_SOgRPCaSq6B0ytutp0HqEGNf977d-s"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

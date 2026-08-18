@@ -149,6 +149,11 @@ export const dataApi = {
   listCustomers: () => request<{ customers: any[] }>('/api/admin/customers'),
   getCustomerNotifications: (customerId: number) =>
     request<{ notifications: any[] }>(`/api/admin/customers/${customerId}/notifications`),
+  sendPush: (title: string, message: string, audience: 'all' | 'customers') =>
+    request<{ ok: boolean; totalTokens: number; successCount: number; failCount: number; staleRemoved: number }>(
+      '/api/admin/push/send',
+      { method: 'POST', body: JSON.stringify({ title, message, audience }) },
+    ),
   updateCustomer: (id: number, data: any) =>
     request<{ customer: any }>(`/api/admin/customers/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
 

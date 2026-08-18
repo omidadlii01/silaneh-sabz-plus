@@ -1,6 +1,7 @@
 export interface Env {
   DB: D1Database;
   ADMIN_TOKEN: string;
+  FIREBASE_SERVICE_ACCOUNT_JSON?: string;
 }
 
 function cors(resp: Response): Response {
@@ -182,6 +183,110 @@ function notificationToJson(n: any) {
 
 // Customer app uses camelCase and a slightly different shape (matches the
 // NotificationItem interface in src/components/NotificationsModal.tsx).
+// ---------------------------------------------------------------------------
+// Firebase Cloud Messaging (HTTP v1 API)
+// ---------------------------------------------------------------------------
+// The server needs an OAuth2 access token to call FCM's v1 send endpoint --
+// the client-side api_key in google-services.json only lets a *device*
+// register for messages, it cannot be used to send them. We sign a short-
+// lived JWT with the Firebase service account's private key (RS256, via the
+// Workers runtime's Web Crypto API) and exchange it for an access token.
+
+function base64UrlEncode(input: ArrayBuffer | string): string {
+  let bytes: Uint8Array;
+  if (typeof input === 'string') {
+    bytes = new TextEncoder().encode(input);
+  } else {
+    bytes = new Uint8Array(input);
+  }
+  let binary = '';
+  for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+function pemToArrayBuffer(pem: string): ArrayBuffer {
+  const b64 = pem
+    .replace(/-----BEGIN PRIVATE KEY-----/, '')
+    .replace(/-----END PRIVATE KEY-----/, '')
+    .replace(/\s+/g, '');
+  const binary = atob(b64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes.buffer;
+}
+
+async function getFcmAccessToken(env: Env): Promise<{ accessToken: string; projectId: string } | { error: string }> {
+  if (!env.FIREBASE_SERVICE_ACCOUNT_JSON) {
+    return { error: 'FIREBASE_SERVICE_ACCOUNT_JSON secret is not configured on the Worker.' };
+  }
+  let sa: any;
+  try {
+    sa = JSON.parse(env.FIREBASE_SERVICE_ACCOUNT_JSON);
+  } catch {
+    return { error: 'FIREBASE_SERVICE_ACCOUNT_JSON is not valid JSON.' };
+  }
+
+  const now = Math.floor(Date.now() / 1000);
+  const header = { alg: 'RS256', typ: 'JWT' };
+  const claims = {
+    iss: sa.client_email,
+    scope: 'https://www.googleapis.com/auth/firebase.messaging',
+    aud: 'https://oauth2.googleapis.com/token',
+    iat: now,
+    exp: now + 3600,
+  };
+  const unsigned = `${base64UrlEncode(JSON.stringify(header))}.${base64UrlEncode(JSON.stringify(claims))}`;
+
+  const key = await crypto.subtle.importKey(
+    'pkcs8',
+    pemToArrayBuffer(sa.private_key),
+    { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
+    false,
+    ['sign'],
+  );
+  const signature = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', key, new TextEncoder().encode(unsigned));
+  const jwt = `${unsigned}.${base64UrlEncode(signature)}`;
+
+  const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: `grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=${jwt}`,
+  });
+  const tokenData = await tokenRes.json<any>();
+  if (!tokenRes.ok || !tokenData.access_token) {
+    return { error: `Failed to obtain FCM access token: ${JSON.stringify(tokenData)}` };
+  }
+  return { accessToken: tokenData.access_token, projectId: sa.project_id };
+}
+
+async function sendFcmMessage(
+  accessToken: string,
+  projectId: string,
+  token: string,
+  title: string,
+  body: string,
+  data?: Record<string, string>,
+): Promise<{ ok: boolean; error?: string }> {
+  const res = await fetch(`https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      message: {
+        token,
+        notification: { title, body },
+        data: data || {},
+        android: { priority: 'high', notification: { sound: 'default' } },
+      },
+    }),
+  });
+  if (res.ok) return { ok: true };
+  const errBody = await res.text();
+  return { ok: false, error: errBody };
+}
+
 function customerNotificationToJson(n: any) {
   return {
     id: String(n.id),
@@ -754,7 +859,76 @@ export default {
         return json({ ok: true });
       }
 
-      // --- MANAGER APP: PUBLIC admin-user signup/login (no auth required) ---
+      // --- PUSH: REGISTER DEVICE TOKEN (public -- called on app open/login) ---
+      if (path === '/api/push/register' && method === 'POST') {
+        const body = await request.json<any>();
+        const { token, customerId, platform } = body;
+        if (!token) return json({ error: 'توکن دستگاه ارسال نشده است.' }, 400);
+
+        await env.DB.prepare(
+          `INSERT INTO device_tokens (token, customer_id, platform, last_seen_at)
+           VALUES (?, ?, ?, datetime('now'))
+           ON CONFLICT(token) DO UPDATE SET customer_id = excluded.customer_id, last_seen_at = datetime('now')`,
+        )
+          .bind(token, customerId || null, platform || 'android')
+          .run();
+
+        return json({ ok: true });
+      }
+
+      // --- PUSH: UNREGISTER DEVICE TOKEN (e.g. on logout) ---
+      if (path === '/api/push/unregister' && method === 'POST') {
+        const body = await request.json<any>();
+        const { token } = body;
+        if (!token) return json({ error: 'توکن دستگاه ارسال نشده است.' }, 400);
+        await env.DB.prepare('DELETE FROM device_tokens WHERE token = ?').bind(token).run();
+        return json({ ok: true });
+      }
+
+      // --- ADMIN: SEND PUSH NOTIFICATION (broadcast, e.g. "new app version") ---
+      if (path === '/api/admin/push/send' && method === 'POST') {
+        const body = await request.json<any>();
+        const { title, message, audience } = body;
+        if (!title || !message) return json({ error: 'عنوان و متن پیام الزامی است.' }, 400);
+
+        const fcmAuth = await getFcmAccessToken(env);
+        if ('error' in fcmAuth) return json({ error: fcmAuth.error }, 500);
+
+        let tokensQuery = 'SELECT token FROM device_tokens';
+        if (audience === 'customers') tokensQuery += ' WHERE customer_id IS NOT NULL';
+        const rows = await env.DB.prepare(tokensQuery).all();
+        const tokens = (rows.results as any[]).map((r) => r.token);
+
+        let successCount = 0;
+        let failCount = 0;
+        const staleTokens: string[] = [];
+
+        for (const t of tokens) {
+          const result = await sendFcmMessage(fcmAuth.accessToken, fcmAuth.projectId, t, title, message);
+          if (result.ok) {
+            successCount++;
+          } else {
+            failCount++;
+            // NOT_FOUND / UNREGISTERED means the app was uninstalled or the
+            // token expired -- clean it up so future sends don't keep
+            // failing on it.
+            if (result.error && (result.error.includes('UNREGISTERED') || result.error.includes('NOT_FOUND'))) {
+              staleTokens.push(t);
+            }
+          }
+        }
+
+        if (staleTokens.length > 0) {
+          const placeholders = staleTokens.map(() => '?').join(',');
+          await env.DB.prepare(`DELETE FROM device_tokens WHERE token IN (${placeholders})`)
+            .bind(...staleTokens)
+            .run();
+        }
+
+        return json({ ok: true, totalTokens: tokens.length, successCount, failCount, staleRemoved: staleTokens.length });
+      }
+
+
       if (path === '/api/admin/user-signup' && method === 'POST') {
         const body = await request.json<any>();
         const { first_name, last_name, phone, password } = body;

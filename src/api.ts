@@ -463,3 +463,21 @@ export function loadSession(): Customer | null {
 export function clearSession() {
   localStorage.removeItem(SESSION_KEY);
 }
+
+// ---------------------------------------------------------------------------
+// Push notifications (device token registration)
+// ---------------------------------------------------------------------------
+
+export async function apiRegisterPushToken(token: string, customerId?: string): Promise<void> {
+  await request('/api/push/register', {
+    method: 'POST',
+    body: JSON.stringify({ token, customerId: customerId || null, platform: 'android' }),
+  });
+}
+
+export async function apiUnregisterPushToken(token: string): Promise<void> {
+  await request('/api/push/unregister', {
+    method: 'POST',
+    body: JSON.stringify({ token }),
+  });
+}

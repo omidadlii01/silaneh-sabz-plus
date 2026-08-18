@@ -16,6 +16,7 @@ import {
   Customer,
 } from './api';
 import { assetUrl } from './utils/assets';
+import { usePushNotifications, unregisterDevicePush } from './hooks/usePushNotifications';
 import { Header } from './components/Header';
 import { SearchBar } from './components/SearchBar';
 import { CategoryGrid } from './components/CategoryGrid';
@@ -95,6 +96,7 @@ export default function App() {
   // real /api/login and /api/signup endpoints)
   // ------------------------------------------------------------------
   const [customer, setCustomer] = useState<Customer | null>(() => loadSession());
+  usePushNotifications(customer?.id);
   const isLoggedIn = !!customer;
   const userProfile: UserProfileData = customer ? customerToProfile(customer) : GUEST_PROFILE;
   const visitorInfo: VisitorInfo | null = customer ? customerToVisitorInfo(customer) : null;
@@ -184,6 +186,7 @@ export default function App() {
   };
 
   const handleLogout = () => {
+    unregisterDevicePush();
     clearSession();
     setCustomer(null);
     setOrders([]);

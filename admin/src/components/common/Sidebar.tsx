@@ -1,7 +1,7 @@
 import React from 'react';
 import { useAuth } from '../../context/AuthContext';
 import {
-  LayoutDashboard, ShoppingCart, Users, Package, Award, Sparkles, UserCheck, Settings, BarChart3, Lock, ChevronLeft, Menu, X
+  LayoutDashboard, ShoppingCart, Users, Package, Award, Sparkles, UserCheck, Settings, BarChart3, Lock, ChevronLeft, Menu, X, Bell
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -23,6 +23,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate, isOpe
     { path: '/brands', label: 'برندهای سیلانه سبز', icon: Award },
     { path: '/offers', label: 'آفرهای هفته و پکیج‌ها', icon: Sparkles },
     { path: '/reports', label: 'گزارشات و تحلیل فروش', icon: BarChart3 },
+    { path: '/notifications', label: 'ارسال نوتیفیکیشن', icon: Bell, onlySuperAdmin: true },
     { path: '/admin-users', label: 'مدیریت کاربران ادمین', icon: UserCheck, onlySuperAdmin: true },
     { path: '/settings', label: 'تنظیمات سیستم', icon: Settings },
   ];
