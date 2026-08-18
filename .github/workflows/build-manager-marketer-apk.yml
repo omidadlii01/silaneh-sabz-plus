@@ -1,0 +1,95 @@
+name: Build Manager & Marketer APKs
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - dir: admin
+            base_path: /silaneh-sabz-plus/admin/
+            apk_name: silaneh-sabz-plus-manager.apk
+            release_title: Manager app
+          - dir: marketer
+            base_path: /silaneh-sabz-plus/marketer/
+            apk_name: silaneh-sabz-plus-marketer.apk
+            release_title: Marketer app
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        working-directory: ./${{ matrix.dir }}
+        run: npm install
+
+      - name: Build web app (APK build uses root-relative assets, not the Pages sub-path)
+        working-directory: ./${{ matrix.dir }}
+        run: npm run build
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Sync Capacitor Android project
+        working-directory: ./${{ matrix.dir }}
+        run: |
+          set +e
+          npx cap sync android > cap_sync_output.log 2>&1
+          code=$?
+          cat cap_sync_output.log
+          if [ $code -ne 0 ]; then
+            msg=$(tail -c 1800 cap_sync_output.log | tr '\n' ' ' | tr '%' ' ')
+            echo "::error::CAP_SYNC_FAILED(${{ matrix.dir }}): $msg"
+            exit $code
+          fi
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x ${{ matrix.dir }}/android/gradlew
+
+      - name: Build debug APK
+        run: |
+          set +e
+          cd ${{ matrix.dir }}/android
+          ./gradlew assembleDebug --no-daemon > gradle_output.log 2>&1
+          code=$?
+          tail -c 4000 gradle_output.log
+          if [ $code -ne 0 ]; then
+            msg=$(tail -c 1800 gradle_output.log | tr '\n' ' ' | tr '%' ' ')
+            echo "::error::GRADLE_FAILED(${{ matrix.dir }}): $msg"
+            exit $code
+          fi
+
+      - name: Rename APK
+        run: cp ${{ matrix.dir }}/android/app/build/outputs/apk/debug/app-debug.apk ${{ matrix.dir }}/android/app/build/outputs/apk/debug/${{ matrix.apk_name }}
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.apk_name }}
+          path: ${{ matrix.dir }}/android/app/build/outputs/apk/debug/${{ matrix.apk_name }}
+
+      - name: Publish APK as public Release asset
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: "Silaneh Sabz Plus - Latest APKs"
+          body: "Automatically built debug APKs for all three apps (customer, manager, marketer). Direct download, no GitHub login required."
+          files: ${{ matrix.dir }}/android/app/build/outputs/apk/debug/${{ matrix.apk_name }}
+          make_latest: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
