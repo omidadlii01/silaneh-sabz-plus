@@ -178,15 +178,13 @@ export const AuthView: React.FC<AuthViewProps> = ({
         {/* Seylaneh Sabz Official Brand Logo matching the user's uploaded image */}
         <div className="flex flex-col items-center mb-6 text-center">
           <div className="flex items-center justify-center mb-2 py-1 px-3 w-full">
-            {/* Full logo lockup (icon + wordmark), background removed, styled to look etched into the background */}
+            {/* Full logo lockup (icon + wordmark), high-quality upscaled from the original brand asset */}
             <img
               src={logoMark}
               alt="سیلانه سبز"
-              className="w-full max-w-[300px] h-auto object-contain opacity-95"
+              className="w-full max-w-[300px] h-auto object-contain"
               style={{
-                filter:
-                  'drop-shadow(0 1px 0 rgba(255,255,255,0.35)) drop-shadow(0 -1.5px 2px rgba(0,0,0,0.45))',
-                mixBlendMode: 'soft-light',
+                filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.25))',
               }}
             />
           </div>
