@@ -633,6 +633,75 @@ export default {
         return json({ orderId, orderNumber: genOrderNumber() }, 201);
       }
 
+      // --- CUSTOMER: DELETE/CANCEL AN ORDER (only while still pending —
+      //     "ثبت‌شده" — before the store has started processing it) ---
+      const orderDeleteMatch = path.match(/^\/api\/orders\/(\d+)$/);
+      if (orderDeleteMatch && method === 'DELETE') {
+        const orderId = orderDeleteMatch[1];
+        const order = await env.DB.prepare('SELECT status, customer_id FROM orders WHERE id = ?')
+          .bind(orderId)
+          .first<any>();
+        if (!order) return json({ error: 'سفارش یافت نشد.' }, 404);
+        if (order.status !== 'ثبت‌شده') {
+          return json({ error: 'این سفارش وارد فرآیند پردازش شده و دیگر قابل حذف نیست.' }, 400);
+        }
+        await env.DB.prepare('DELETE FROM order_items WHERE order_id = ?').bind(orderId).run();
+        await env.DB.prepare('DELETE FROM orders WHERE id = ?').bind(orderId).run();
+        return json({ success: true });
+      }
+
+      // --- CUSTOMER: ADJUST QUANTITY OF THE FIRST/MAIN ITEM ON A STILL-
+      //     PENDING ORDER (+1 / -1), recalculating totals ---
+      const orderQtyMatch = path.match(/^\/api\/orders\/(\d+)\/main-item-qty$/);
+      if (orderQtyMatch && method === 'PATCH') {
+        const orderId = orderQtyMatch[1];
+        const body = await request.json<any>();
+        const delta = Number(body.delta) || 0;
+
+        const order = await env.DB.prepare('SELECT status FROM orders WHERE id = ?')
+          .bind(orderId)
+          .first<any>();
+        if (!order) return json({ error: 'سفارش یافت نشد.' }, 404);
+        if (order.status !== 'ثبت‌شده') {
+          return json({ error: 'این سفارش وارد فرآیند پردازش شده و دیگر قابل ویرایش نیست.' }, 400);
+        }
+
+        const item = await env.DB.prepare(
+          'SELECT id, quantity, unit_price FROM order_items WHERE order_id = ? ORDER BY id ASC LIMIT 1',
+        )
+          .bind(orderId)
+          .first<any>();
+        if (!item) return json({ error: 'قلمی برای این سفارش یافت نشد.' }, 404);
+
+        const newQty = item.quantity + delta;
+        if (newQty < 1) {
+          return json({ error: 'تعداد نمی‌تواند کمتر از یک باشد. برای حذف کامل از دکمه حذف سفارش استفاده کنید.' }, 400);
+        }
+
+        const newTotalPrice = newQty * item.unit_price;
+        await env.DB.prepare('UPDATE order_items SET quantity = ?, total_price = ? WHERE id = ?')
+          .bind(newQty, newTotalPrice, item.id)
+          .run();
+
+        // Recompute order-level totals from all items.
+        const allItems = await env.DB.prepare('SELECT total_price FROM order_items WHERE order_id = ?')
+          .bind(orderId)
+          .all<any>();
+        const newInitial = (allItems.results || []).reduce((sum: number, it: any) => sum + it.total_price, 0);
+
+        const orderRow = await env.DB.prepare('SELECT discount FROM orders WHERE id = ?')
+          .bind(orderId)
+          .first<any>();
+        const discount = orderRow?.discount || 0;
+        const newFinal = Math.max(0, newInitial - discount);
+
+        await env.DB.prepare('UPDATE orders SET initial_amount = ?, final_amount = ? WHERE id = ?')
+          .bind(newInitial, newFinal, orderId)
+          .run();
+
+        return json({ success: true, newQuantity: newQty, newFinalAmount: newFinal });
+      }
+
       // ===================== MARKETER APP =====================
 
       // --- MARKETER SIGNUP (public; account stays inactive until admin approval) ---

@@ -1,22 +1,55 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Order } from '../types';
-import { formatPrice, toPersianDigits } from '../utils/persian';
+import { formatPrice, toPersianDigits, formatJalaliDateTime, gregorianToJalali, jalaliToGregorian } from '../utils/persian';
 import { assetUrl } from '../utils/assets';
+import { PersianCalendarPicker, formatJalaliShort, todayJalali } from './PersianCalendarPicker';
 
 interface OrdersViewProps {
   orders: Order[];
   onReorder: (order: Order) => void;
+  onDeleteOrder?: (order: Order) => void;
+  onAdjustOrderQty?: (order: Order, delta: number) => void;
 }
 
 type OrderStage = 'pending' | 'confirmed' | 'shipping' | 'delivered';
 
-export const OrdersView: React.FC<OrdersViewProps> = ({ orders, onReorder }) => {
+// Thin, brand-tinted border used consistently around every "box" in this
+// view (order cards, filter bar, status boxes...) — same hue family as the
+// bottom nav's gradient border, but a single hairline rather than a thick
+// gradient ring, per design feedback.
+const THIN_BOX_BORDER = 'border border-[#059669]/25';
+
+const PRIMARY_GRADIENT_BUTTON =
+  'bg-gradient-to-r from-[#10b981] via-[#059669] to-[#047857] hover:from-[#34d399] hover:to-[#059669] text-white shadow-[0_6px_18px_rgba(5,150,105,0.35)] border border-white/40 ring-1 ring-[#059669]/20 backdrop-blur-md active:scale-[0.98] transition-all';
+
+export const OrdersView: React.FC<OrdersViewProps> = ({ orders, onReorder, onDeleteOrder, onAdjustOrderQty }) => {
   const [activeTabFilter, setActiveTabFilter] = useState<'all' | 'active' | 'delivered'>('all');
   const [selectedInvoiceOrder, setSelectedInvoiceOrder] = useState<Order | null>(null);
   const [selectedRatingOrder, setSelectedRatingOrder] = useState<Order | null>(null);
   const [selectedTrackingOrder, setSelectedTrackingOrder] = useState<Order | null>(null);
   const [selectedScheduleOrder, setSelectedScheduleOrder] = useState<Order | null>(null);
   const [activeStage, setActiveStage] = useState<OrderStage>('pending');
+  const [pendingDeleteOrder, setPendingDeleteOrder] = useState<Order | null>(null);
+  const [adjustingOrderId, setAdjustingOrderId] = useState<string | null>(null);
+
+  // --- Filters -------------------------------------------------------
+  const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterDateFrom, setFilterDateFrom] = useState<[number, number, number] | null>(null);
+  const [filterDateTo, setFilterDateTo] = useState<[number, number, number] | null>(null);
+  const [minPrice, setMinPrice] = useState('');
+  const [maxPrice, setMaxPrice] = useState('');
+  const [datePickerTarget, setDatePickerTarget] = useState<'from' | 'to' | null>(null);
+
+  const activeFilterCount =
+    (filterDateFrom ? 1 : 0) + (filterDateTo ? 1 : 0) + (minPrice ? 1 : 0) + (maxPrice ? 1 : 0);
+
+  const resetFilters = () => {
+    setFilterDateFrom(null);
+    setFilterDateTo(null);
+    setMinPrice('');
+    setMaxPrice('');
+  };
 
   // Rating form state inside modal
   const [userStars, setUserStars] = useState<number>(5);
@@ -27,23 +60,14 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ orders, onReorder }) => 
 
   // Store Presence Schedule state per order
   const [presenceSchedules, setPresenceSchedules] = useState<
-    Record<string, { date: string; timeSlot: string; notes?: string }>
-  >({
-    'ord-101': { date: 'امروز (۱۴ مرداد)', timeSlot: '۰۹:۰۰ تا ۱۲:۰۰ (صبح)', notes: 'مغازه باز است' },
-  });
+    Record<string, { jalaliDate: [number, number, number]; timeSlot: string; notes?: string }>
+  >({});
 
   // Form states for presence modal
-  const [selectedDate, setSelectedDate] = useState<string>('امروز (۱۴ مرداد)');
+  const [selectedJalaliDate, setSelectedJalaliDate] = useState<[number, number, number]>(todayJalali());
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string>('۰۹:۰۰ تا ۱۲:۰۰ (صبح)');
   const [presenceNote, setPresenceNote] = useState<string>('');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-
-  const datesOptions = [
-    { id: 'today', label: 'امروز (۱۴ مرداد)', sub: 'امروز' },
-    { id: 'tomorrow', label: 'فردا (۱۵ مرداد)', sub: 'روز کاری بعد' },
-    { id: 'day_after', label: 'پس‌فردا (۱۶ مرداد)', sub: 'دو روز دیگر' },
-    { id: 'saturday', label: 'شنبه آینده', sub: 'آغاز هفته' },
-  ];
 
   const timeSlotOptions = [
     { id: 'morning', label: '۰۸:۰۰ تا ۱۲:۰۰', title: 'شیفت صبح', icon: 'wb_sunny' },
@@ -52,11 +76,42 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ orders, onReorder }) => 
     { id: 'evening', label: '۱۸:۰۰ تا ۲۱:۰۰', title: 'شیفت شب', icon: 'bedtime' },
   ];
 
-  const filteredOrders = orders.filter((o) => {
-    if (activeTabFilter === 'active') return o.status !== 'delivered';
-    if (activeTabFilter === 'delivered') return o.status === 'delivered';
-    return true;
-  });
+  const filteredOrders = useMemo(() => {
+    return orders.filter((o) => {
+      if (activeTabFilter === 'active' && o.status === 'delivered') return false;
+      if (activeTabFilter === 'delivered' && o.status !== 'delivered') return false;
+
+      if (searchQuery.trim()) {
+        const q = searchQuery.trim().toLowerCase();
+        const matchesOrderNumber = o.orderNumber.toLowerCase().includes(q);
+        const matchesItem = o.items.some((it) => it.productName.toLowerCase().includes(q));
+        if (!matchesOrderNumber && !matchesItem) return false;
+      }
+
+      if (minPrice && o.totalAmount < Number(minPrice)) return false;
+      if (maxPrice && o.totalAmount > Number(maxPrice)) return false;
+
+      if (filterDateFrom || filterDateTo) {
+        const orderDate = new Date((o.date || '').includes('T') ? o.date : o.date.replace(' ', 'T') + 'Z');
+        if (!isNaN(orderDate.getTime())) {
+          if (filterDateFrom) {
+            const [fy, fm, fd] = filterDateFrom;
+            const from = jalaliToGregorian(fy, fm, fd);
+            from.setHours(0, 0, 0, 0);
+            if (orderDate < from) return false;
+          }
+          if (filterDateTo) {
+            const [ty, tm, td] = filterDateTo;
+            const to = jalaliToGregorian(ty, tm, td);
+            to.setHours(23, 59, 59, 999);
+            if (orderDate > to) return false;
+          }
+        }
+      }
+
+      return true;
+    });
+  }, [orders, activeTabFilter, searchQuery, minPrice, maxPrice, filterDateFrom, filterDateTo]);
 
   const handleOpenRating = (order: Order) => {
     const existing = orderRatings[order.id];
@@ -83,11 +138,11 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ orders, onReorder }) => 
   const handleOpenScheduleModal = (order: Order) => {
     const existing = presenceSchedules[order.id];
     if (existing) {
-      setSelectedDate(existing.date);
+      setSelectedJalaliDate(existing.jalaliDate);
       setSelectedTimeSlot(existing.timeSlot);
       setPresenceNote(existing.notes || '');
     } else {
-      setSelectedDate('امروز (۱۴ مرداد)');
+      setSelectedJalaliDate(todayJalali());
       setSelectedTimeSlot('۰۹:۰۰ تا ۱۲:۰۰ (صبح)');
       setPresenceNote('');
     }
@@ -99,20 +154,37 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ orders, onReorder }) => 
       setPresenceSchedules((prev) => ({
         ...prev,
         [selectedScheduleOrder.id]: {
-          date: selectedDate,
+          jalaliDate: selectedJalaliDate,
           timeSlot: selectedTimeSlot,
           notes: presenceNote,
         },
       }));
 
       setToastMessage(
-        `زمان حضور شما در مغازه (${selectedDate} - ${selectedTimeSlot}) ثبت شد.`
+        `زمان حضور شما در مغازه (${formatJalaliShort(selectedJalaliDate)} - ${selectedTimeSlot}) ثبت شد.`
       );
       setSelectedScheduleOrder(null);
 
       setTimeout(() => {
         setToastMessage(null);
       }, 4000);
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (pendingDeleteOrder && onDeleteOrder) {
+      await onDeleteOrder(pendingDeleteOrder);
+    }
+    setPendingDeleteOrder(null);
+  };
+
+  const handleAdjustQty = async (order: Order, delta: number) => {
+    if (!onAdjustOrderQty) return;
+    setAdjustingOrderId(order.id);
+    try {
+      await onAdjustOrderQty(order, delta);
+    } finally {
+      setAdjustingOrderId(null);
     }
   };
 
@@ -168,7 +240,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ orders, onReorder }) => 
       )}
 
       {/* 1. Page Title Bar */}
-      <div className="bg-white rounded-2xl p-4 shadow-xs border border-[#e2e8f0] mb-3 flex items-center justify-between">
+      <div className={`bg-white rounded-2xl p-4 shadow-xs ${THIN_BOX_BORDER} mb-3 flex items-center justify-between`}>
         <h1 className="font-['Vazirmatn'] text-[18px] font-black text-[#0f172a]">
           سفارش‌های من
         </h1>
@@ -177,39 +249,155 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ orders, onReorder }) => 
         </span>
       </div>
 
-      {/* 2. Status Filter Tabs */}
-      <div className="flex gap-2 mb-3.5 bg-white border border-[#e2e8f0] p-1.5 rounded-2xl text-[12px] font-extrabold shadow-2xs">
+      {/* 2. Status Filter Tabs + Filter Toggle */}
+      <div className="flex gap-2 mb-2">
+        <div className={`flex-1 flex gap-2 bg-white ${THIN_BOX_BORDER} p-1.5 rounded-2xl text-[12px] font-extrabold shadow-2xs`}>
+          <button
+            onClick={() => setActiveTabFilter('all')}
+            className={`flex-1 py-2 rounded-xl transition-all ${
+              activeTabFilter === 'all'
+                ? 'bg-gradient-to-r from-[#10b981] to-[#047857] text-white shadow-xs'
+                : 'text-[#64748b] hover:text-[#0f172a]'
+            }`}
+          >
+            همه
+          </button>
+          <button
+            onClick={() => setActiveTabFilter('active')}
+            className={`flex-1 py-2 rounded-xl transition-all ${
+              activeTabFilter === 'active'
+                ? 'bg-gradient-to-r from-[#10b981] to-[#047857] text-white shadow-xs'
+                : 'text-[#64748b] hover:text-[#0f172a]'
+            }`}
+          >
+            در حال پردازش
+          </button>
+          <button
+            onClick={() => setActiveTabFilter('delivered')}
+            className={`flex-1 py-2 rounded-xl transition-all ${
+              activeTabFilter === 'delivered'
+                ? 'bg-gradient-to-r from-[#10b981] to-[#047857] text-white shadow-xs'
+                : 'text-[#64748b] hover:text-[#0f172a]'
+            }`}
+          >
+            تحویل شده
+          </button>
+        </div>
+
         <button
-          onClick={() => setActiveTabFilter('all')}
-          className={`flex-1 py-2 rounded-xl transition-all ${
-            activeTabFilter === 'all'
-              ? 'bg-[#004532] text-white shadow-xs'
-              : 'text-[#64748b] hover:text-[#0f172a]'
+          onClick={() => setIsFilterPanelOpen((v) => !v)}
+          className={`relative shrink-0 w-11 rounded-2xl flex items-center justify-center transition-all shadow-2xs ${
+            isFilterPanelOpen || activeFilterCount > 0
+              ? 'bg-gradient-to-br from-[#10b981] to-[#047857] text-white'
+              : `bg-white ${THIN_BOX_BORDER} text-[#334155]`
           }`}
+          title="فیلترها"
         >
-          همه
-        </button>
-        <button
-          onClick={() => setActiveTabFilter('active')}
-          className={`flex-1 py-2 rounded-xl transition-all ${
-            activeTabFilter === 'active'
-              ? 'bg-[#004532] text-white shadow-xs'
-              : 'text-[#64748b] hover:text-[#0f172a]'
-          }`}
-        >
-          در حال پردازش
-        </button>
-        <button
-          onClick={() => setActiveTabFilter('delivered')}
-          className={`flex-1 py-2 rounded-xl transition-all ${
-            activeTabFilter === 'delivered'
-              ? 'bg-[#004532] text-white shadow-xs'
-              : 'text-[#64748b] hover:text-[#0f172a]'
-          }`}
-        >
-          تحویل شده
+          <span className="material-symbols-outlined text-[20px]">tune</span>
+          {activeFilterCount > 0 && (
+            <span className="absolute -top-1 -left-1 w-4 h-4 rounded-full bg-[#ea580c] text-white text-[9px] font-black flex items-center justify-center border border-white">
+              {toPersianDigits(activeFilterCount)}
+            </span>
+          )}
         </button>
       </div>
+
+      {/* 2b. Expandable Filter Panel */}
+      {isFilterPanelOpen && (
+        <div className={`bg-white ${THIN_BOX_BORDER} rounded-2xl p-3.5 mb-3.5 shadow-2xs space-y-3 animate-in fade-in slide-in-from-top-2 duration-200`}>
+          {/* Search */}
+          <div className="relative">
+            <span className="material-symbols-outlined text-[18px] text-[#94a3b8] absolute right-3 top-1/2 -translate-y-1/2">
+              search
+            </span>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="جستجو بر اساس شماره سفارش یا نام کالا..."
+              className="w-full bg-[#f8fafc] border border-[#e2e8f0] rounded-xl py-2.5 pr-9 pl-3 text-[12px] text-[#0f172a] focus:outline-hidden focus:border-[#059669]"
+            />
+          </div>
+
+          {/* Date Range */}
+          <div>
+            <label className="text-[11.5px] font-black text-[#334155] flex items-center gap-1 mb-1.5">
+              <span className="material-symbols-outlined text-[15px] text-[#059669]">event</span>
+              بازه زمانی ثبت سفارش
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => setDatePickerTarget(datePickerTarget === 'from' ? null : 'from')}
+                className={`p-2.5 rounded-xl border text-[11.5px] font-bold text-right transition-all ${
+                  datePickerTarget === 'from'
+                    ? 'border-[#059669] bg-[#ecfdf5] text-[#004532] ring-1 ring-[#059669]/25'
+                    : 'border-[#e2e8f0] bg-[#f8fafc] text-[#334155]'
+                }`}
+              >
+                {filterDateFrom ? formatJalaliShort(filterDateFrom) : 'از تاریخ...'}
+              </button>
+              <button
+                onClick={() => setDatePickerTarget(datePickerTarget === 'to' ? null : 'to')}
+                className={`p-2.5 rounded-xl border text-[11.5px] font-bold text-right transition-all ${
+                  datePickerTarget === 'to'
+                    ? 'border-[#059669] bg-[#ecfdf5] text-[#004532] ring-1 ring-[#059669]/25'
+                    : 'border-[#e2e8f0] bg-[#f8fafc] text-[#334155]'
+                }`}
+              >
+                {filterDateTo ? formatJalaliShort(filterDateTo) : 'تا تاریخ...'}
+              </button>
+            </div>
+
+            {datePickerTarget && (
+              <div className="mt-2">
+                <PersianCalendarPicker
+                  value={datePickerTarget === 'from' ? filterDateFrom : filterDateTo}
+                  disablePast={false}
+                  onChange={(d) => {
+                    if (datePickerTarget === 'from') setFilterDateFrom(d);
+                    else setFilterDateTo(d);
+                    setDatePickerTarget(null);
+                  }}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Price Range */}
+          <div>
+            <label className="text-[11.5px] font-black text-[#334155] flex items-center gap-1 mb-1.5">
+              <span className="material-symbols-outlined text-[15px] text-[#059669]">payments</span>
+              بازه مبلغ سفارش (تومان)
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              <input
+                type="number"
+                value={minPrice}
+                onChange={(e) => setMinPrice(e.target.value)}
+                placeholder="حداقل"
+                className="w-full bg-[#f8fafc] border border-[#e2e8f0] rounded-xl p-2.5 text-[11.5px] text-[#0f172a] focus:outline-hidden focus:border-[#059669]"
+              />
+              <input
+                type="number"
+                value={maxPrice}
+                onChange={(e) => setMaxPrice(e.target.value)}
+                placeholder="حداکثر"
+                className="w-full bg-[#f8fafc] border border-[#e2e8f0] rounded-xl p-2.5 text-[11.5px] text-[#0f172a] focus:outline-hidden focus:border-[#059669]"
+              />
+            </div>
+          </div>
+
+          {activeFilterCount > 0 && (
+            <button
+              onClick={resetFilters}
+              className="w-full py-2 rounded-xl border border-[#e2e8f0] text-[#64748b] hover:bg-[#f8fafc] text-[11.5px] font-bold flex items-center justify-center gap-1 transition-all"
+            >
+              <span className="material-symbols-outlined text-[15px]">restart_alt</span>
+              پاک کردن فیلترها
+            </button>
+          )}
+        </div>
+      )}
 
       {/* 3. Orders List */}
       {filteredOrders.length === 0 ? (
@@ -236,9 +424,9 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ orders, onReorder }) => 
             return (
               <div
                 key={order.id}
-                className="bg-white border border-[#e2e8f0] rounded-3xl p-4 shadow-xs hover:shadow-md transition-all duration-200 text-right space-y-3 relative overflow-hidden"
+                className={`bg-white ${THIN_BOX_BORDER} rounded-3xl p-4 shadow-xs hover:shadow-md transition-all duration-200 text-right space-y-3 relative overflow-hidden`}
               >
-                {/* Header Row: Store Logo Avatar + Store Name + Status Badge */}
+                {/* Header Row: Store Logo Avatar + Store Name + Status Badge + Delete */}
                 <div className="flex items-start justify-between gap-2 border-b border-[#f1f5f9] pb-3">
                   <div className="flex items-center gap-3">
                     {/* Store Logo Avatar */}
@@ -264,12 +452,23 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ orders, onReorder }) => 
                     </div>
                   </div>
 
-                  {getStatusBadge(order.status, order.statusText)}
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {getStatusBadge(order.status, order.statusText)}
+                    {order.status === 'pending' && onDeleteOrder && (
+                      <button
+                        onClick={() => setPendingDeleteOrder(order)}
+                        className="w-7 h-7 rounded-full text-[#dc2626] hover:bg-[#fef2f2] flex items-center justify-center transition-colors active:scale-90"
+                        title="حذف سفارش"
+                      >
+                        <span className="material-symbols-outlined text-[17px]">delete</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
 
-                {/* Main Product Tag Pill */}
+                {/* Main Product Tag Pill + Quantity Stepper (editable while pending) */}
                 {mainItem && (
-                  <div>
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
                     <span className="inline-flex items-center gap-1.5 bg-[#f8fafc] border border-[#e2e8f0] text-[#334155] px-3 py-1.5 rounded-xl font-bold text-[12px] shadow-2xs">
                       <span>{mainItem.productName}</span>
                       {remainingCount > 0 && (
@@ -278,11 +477,35 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ orders, onReorder }) => 
                         </span>
                       )}
                     </span>
+
+                    {order.status === 'pending' && onAdjustOrderQty && (
+                      <div className="flex items-center gap-1 bg-[#f0fdf4] border border-[#bbf7d0] rounded-xl p-0.5 shrink-0">
+                        <button
+                          onClick={() => handleAdjustQty(order, 1)}
+                          disabled={adjustingOrderId === order.id}
+                          className="w-6 h-6 bg-gradient-to-br from-[#10b981] to-[#047857] text-white rounded-lg flex items-center justify-center font-black text-[13px] active:scale-90 transition-all disabled:opacity-50"
+                          title="افزایش تعداد"
+                        >
+                          +
+                        </button>
+                        <span className="text-[11.5px] font-black text-[#0f172a] px-1.5 min-w-[18px] text-center">
+                          {toPersianDigits(mainItem.quantity)}
+                        </span>
+                        <button
+                          onClick={() => handleAdjustQty(order, -1)}
+                          disabled={adjustingOrderId === order.id || mainItem.quantity <= 1}
+                          className="w-6 h-6 bg-white text-[#dc2626] border border-[#fecaca] rounded-lg flex items-center justify-center font-black text-[13px] active:scale-90 transition-all disabled:opacity-40"
+                          title="کاهش تعداد"
+                        >
+                          -
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
 
                 {/* Price, Date & Time Row */}
-                <div className="flex items-center justify-between text-[12px] font-extrabold text-[#334155] bg-[#f8fafc]/60 p-2.5 rounded-2xl border border-[#f1f5f9]">
+                <div className={`flex items-center justify-between text-[12px] font-extrabold text-[#334155] bg-[#f8fafc]/60 p-2.5 rounded-2xl ${THIN_BOX_BORDER}`}>
                   <div className="flex items-center gap-1.5 text-[#0f172a]">
                     <span className="material-symbols-outlined text-[16px] text-[#64748b]">
                       receipt
@@ -294,22 +517,20 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ orders, onReorder }) => 
 
                   <div className="flex items-center gap-1.5 text-[#64748b] font-bold text-[11.5px]">
                     <span className="material-symbols-outlined text-[15px]">calendar_today</span>
-                    <span>
-                      {order.date} - {order.time || '۲۲:۰۵'}
-                    </span>
+                    <span>{formatJalaliDateTime(order.date)}</span>
                   </div>
                 </div>
 
                 {/* STORE PRESENCE BANNER BUTTON / DISPLAY BOX */}
                 {!isDelivered && (
-                  <div className="bg-[#f0fdf4] border border-[#bbf7d0] p-3 rounded-2xl flex items-center justify-between text-[12px] transition-all">
+                  <div className={`bg-[#f0fdf4] ${THIN_BOX_BORDER} p-3 rounded-2xl flex items-center justify-between text-[12px] transition-all`}>
                     <div className="flex items-center gap-2">
                       <span className="material-symbols-outlined text-[#16a34a] text-[18px]">
                         store
                       </span>
                       {presenceData ? (
                         <span className="font-extrabold text-[#15803d]">
-                          زمان حضور: {presenceData.date} | {presenceData.timeSlot}
+                          زمان حضور: {formatJalaliShort(presenceData.jalaliDate)} | {presenceData.timeSlot}
                         </span>
                       ) : (
                         <span className="font-extrabold text-[#15803d]">
@@ -392,7 +613,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ orders, onReorder }) => 
 
                   <button
                     onClick={() => onReorder(order)}
-                    className="w-full py-2.5 rounded-2xl bg-[#004532] hover:bg-[#022c22] text-white font-black text-[12.5px] active:scale-[0.98] transition-all flex items-center justify-center gap-1.5 shadow-xs"
+                    className={`w-full py-2.5 rounded-2xl font-black text-[12.5px] flex items-center justify-center gap-1.5 ${PRIMARY_GRADIENT_BUTTON}`}
                   >
                     <span className="material-symbols-outlined text-[17px]">replay</span>
                     <span>سفارش مجدد</span>
@@ -415,7 +636,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ orders, onReorder }) => 
                   هماهنگی تحویل مرسوله
                 </span>
                 <h2 className="text-[16.5px] font-black text-[#0f172a] mt-1">
-                  تعیین زمان حضور در مغازه (سفارش {selectedScheduleOrder.orderNumber})
+                  تعیین زمان حضور در مغازه
                 </h2>
                 <p className="text-[11.5px] text-[#64748b] mt-0.5">
                   لطفاً روز و ساعت دقیق حضور خود در مغازه را مشخص کنید تا سفیر ارسال در زمان مناسب مراجعه کند.
@@ -430,7 +651,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ orders, onReorder }) => 
               </button>
             </div>
 
-            {/* Step 1: Date Selection */}
+            {/* Step 1: Date Selection — visual Jalali calendar */}
             <div className="space-y-2 mb-4">
               <label className="text-[12.5px] font-black text-[#0f172a] flex items-center gap-1.5">
                 <span className="material-symbols-outlined text-[17px] text-[#059669]">
@@ -439,22 +660,17 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ orders, onReorder }) => 
                 <span>۱. انتخاب تاریخ حضور در مغازه</span>
               </label>
 
-              <div className="grid grid-cols-2 gap-2">
-                {datesOptions.map((item) => (
-                  <button
-                    key={item.id}
-                    onClick={() => setSelectedDate(item.label)}
-                    className={`p-3 rounded-2xl border text-right transition-all flex flex-col gap-0.5 ${
-                      selectedDate === item.label
-                        ? 'border-[#059669] bg-[#ecfdf5] text-[#004532] ring-2 ring-[#059669]/20 font-black shadow-2xs'
-                        : 'border-[#e2e8f0] bg-[#f8fafc] text-[#334155] hover:border-[#cbd5e1] font-extrabold'
-                    }`}
-                  >
-                    <span className="text-[12.5px]">{item.label}</span>
-                    <span className="text-[10px] text-[#64748b]">{item.sub}</span>
-                  </button>
-                ))}
+              <div className="bg-[#f8fafc] border border-[#e2e8f0] rounded-2xl px-3 py-2 flex items-center justify-between mb-2">
+                <span className="text-[12.5px] font-black text-[#004532]">
+                  {formatJalaliShort(selectedJalaliDate)}
+                </span>
+                <span className="material-symbols-outlined text-[16px] text-[#059669]">event_available</span>
               </div>
+
+              <PersianCalendarPicker
+                value={selectedJalaliDate}
+                onChange={setSelectedJalaliDate}
+              />
             </div>
 
             {/* Step 2: Time Window Selection */}
@@ -510,7 +726,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ orders, onReorder }) => 
             <div className="flex gap-2">
               <button
                 onClick={handleSaveSchedule}
-                className="flex-1 py-3.5 bg-[#004532] hover:bg-[#022c22] text-white font-black text-[13px] rounded-2xl shadow-xs transition-all active:scale-95 flex items-center justify-center gap-2"
+                className={`flex-1 py-3.5 font-black text-[13px] rounded-2xl flex items-center justify-center gap-2 ${PRIMARY_GRADIENT_BUTTON}`}
               >
                 <span className="material-symbols-outlined text-[18px]">check_circle</span>
                 <span>ثبت نهایی زمان حضور</span>
@@ -519,6 +735,37 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ orders, onReorder }) => 
               <button
                 onClick={() => setSelectedScheduleOrder(null)}
                 className="px-4 py-3.5 bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#475569] font-black text-[12.5px] rounded-2xl border border-[#cbd5e1] transition-all"
+              >
+                انصراف
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 4b. DELETE ORDER CONFIRMATION MODAL */}
+      {pendingDeleteOrder && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl p-5 max-w-sm w-full border border-[#e2e8f0] shadow-2xl text-right animate-in zoom-in-95 duration-200">
+            <div className="w-14 h-14 rounded-2xl bg-[#fef2f2] text-[#dc2626] flex items-center justify-center mb-3.5 mx-auto">
+              <span className="material-symbols-outlined text-[28px]">delete</span>
+            </div>
+            <h3 className="text-[15px] font-black text-[#0f172a] text-center mb-1.5">
+              حذف سفارش {pendingDeleteOrder.orderNumber}؟
+            </h3>
+            <p className="text-[12px] text-[#64748b] text-center leading-relaxed mb-5">
+              این سفارش برای همیشه حذف می‌شود و قابل بازگشت نیست.
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={handleConfirmDelete}
+                className="flex-1 py-3 rounded-2xl bg-[#dc2626] hover:bg-[#b91c1c] text-white font-black text-[12.5px] transition-all active:scale-95"
+              >
+                بله، حذف شود
+              </button>
+              <button
+                onClick={() => setPendingDeleteOrder(null)}
+                className="flex-1 py-3 rounded-2xl bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#475569] font-black text-[12.5px] border border-[#cbd5e1] transition-all"
               >
                 انصراف
               </button>
@@ -993,7 +1240,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ orders, onReorder }) => 
                   فاکتور: {selectedInvoiceOrder.orderNumber}
                 </h2>
                 <span className="text-[11px] text-[#64748b]">
-                  تاریخ صدور: {selectedInvoiceOrder.date}
+                  تاریخ صدور: {formatJalaliDateTime(selectedInvoiceOrder.date)}
                 </span>
               </div>
 

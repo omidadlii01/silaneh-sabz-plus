@@ -392,6 +392,22 @@ export async function apiGetOrders(
   return data.orders.map((o) => mapOrder(o, storeName, storeLogo, address));
 }
 
+/** Cancel/delete an order — only allowed while it's still pending (not yet processed). */
+export async function apiDeleteOrder(orderId: string): Promise<void> {
+  await request(`/api/orders/${orderId}`, { method: 'DELETE' });
+}
+
+/** Nudge the quantity of a pending order's first/main item by +1 or -1. */
+export async function apiAdjustOrderMainItemQty(
+  orderId: string,
+  delta: number,
+): Promise<{ newQuantity: number; newFinalAmount: number }> {
+  return request(`/api/orders/${orderId}/main-item-qty`, {
+    method: 'PATCH',
+    body: JSON.stringify({ delta }),
+  });
+}
+
 export async function apiCreateOrder(payload: {
   customerId: string;
   items: { productId: string; productName: string; quantity: number; unitPrice: number; totalPrice: number }[];

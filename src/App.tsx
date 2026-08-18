@@ -6,6 +6,8 @@ import {
   apiGetWeeklyOffers,
   apiGetOrders,
   apiCreateOrder,
+  apiDeleteOrder,
+  apiAdjustOrderMainItemQty,
   apiUpdateCustomerProfile,
   deriveCategories,
   customerToProfile,
@@ -382,6 +384,32 @@ export default function App() {
     );
   };
 
+  const handleDeleteOrder = async (order: Order) => {
+    try {
+      await apiDeleteOrder(order.id);
+      setOrders((prev) => prev.filter((o) => o.id !== order.id));
+      showToast(`سفارش ${order.orderNumber} حذف شد.`);
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'خطا در حذف سفارش. دوباره تلاش کنید.');
+    }
+  };
+
+  const handleAdjustOrderQty = async (order: Order, delta: number) => {
+    try {
+      const result = await apiAdjustOrderMainItemQty(order.id, delta);
+      setOrders((prev) =>
+        prev.map((o) => {
+          if (o.id !== order.id) return o;
+          const items = [...o.items];
+          if (items[0]) items[0] = { ...items[0], quantity: result.newQuantity };
+          return { ...o, items, totalAmount: result.newFinalAmount };
+        })
+      );
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'خطا در ویرایش تعداد سفارش.');
+    }
+  };
+
   // Product sections for the home page — the first three real categories
   // returned by the backend (there's no fixed healthcare/beauty/skin split
   // in the real data, categories are whatever exists in the products table).
@@ -567,7 +595,12 @@ export default function App() {
           )}
 
           {activeTab === 'orders' && (
-            <OrdersView orders={orders} onReorder={handleReorder} />
+            <OrdersView
+              orders={orders}
+              onReorder={handleReorder}
+              onDeleteOrder={handleDeleteOrder}
+              onAdjustOrderQty={handleAdjustOrderQty}
+            />
           )}
 
           {activeTab === 'visitor' && <VisitorView visitor={visitorInfo} />}
