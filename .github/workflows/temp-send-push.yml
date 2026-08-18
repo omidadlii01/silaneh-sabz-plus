@@ -1,0 +1,14 @@
+name: temp-send-push
+on: workflow_dispatch
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send push notification
+        run: |
+          BASE="https://silaneh-sabz-api.omidadli78.workers.dev"
+          RES=$(curl -s -X POST "$BASE/api/admin/push/send" \
+            -H "Content-Type: application/json" \
+            -H "X-Admin-Token: ${{ secrets.ADMIN_DASHBOARD_TOKEN }}" \
+            -d '{"title":"عشقولانه پیام از سیلانه سبز 💚","message":"علی جون نسخه جدید اپلیکیشن آماده شد برو عشق کن 🎉","audience":"all","imageUrl":"https://omidadlii01.github.io/silaneh-sabz-plus/logo-full.png","color":"#059669"}')
+          echo "::notice::RESULT=$RES"

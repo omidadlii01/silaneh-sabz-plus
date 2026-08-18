@@ -266,6 +266,7 @@ async function sendFcmMessage(
   title: string,
   body: string,
   data?: Record<string, string>,
+  opts?: { imageUrl?: string; color?: string },
 ): Promise<{ ok: boolean; error?: string }> {
   const res = await fetch(`https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`, {
     method: 'POST',
@@ -276,9 +277,22 @@ async function sendFcmMessage(
     body: JSON.stringify({
       message: {
         token,
-        notification: { title, body },
+        notification: {
+          title,
+          body,
+          ...(opts?.imageUrl ? { image: opts.imageUrl } : {}),
+        },
         data: data || {},
-        android: { priority: 'high', notification: { sound: 'default' } },
+        android: {
+          priority: 'high',
+          notification: {
+            sound: 'default',
+            color: opts?.color || '#006c4a',
+            ...(opts?.imageUrl ? { image: opts.imageUrl } : {}),
+            notification_priority: 'PRIORITY_MAX',
+            visibility: 'PUBLIC',
+          },
+        },
       },
     }),
   });
@@ -957,7 +971,7 @@ export default {
       // --- ADMIN: SEND PUSH NOTIFICATION (broadcast, e.g. "new app version") ---
       if (path === '/api/admin/push/send' && method === 'POST') {
         const body = await request.json<any>();
-        const { title, message, audience } = body;
+        const { title, message, audience, imageUrl, color } = body;
         if (!title || !message) return json({ error: 'عنوان و متن پیام الزامی است.' }, 400);
 
         const fcmAuth = await getFcmAccessToken(env);
@@ -973,7 +987,10 @@ export default {
         const staleTokens: string[] = [];
 
         for (const t of tokens) {
-          const result = await sendFcmMessage(fcmAuth.accessToken, fcmAuth.projectId, t, title, message);
+          const result = await sendFcmMessage(fcmAuth.accessToken, fcmAuth.projectId, t, title, message, undefined, {
+            imageUrl,
+            color,
+          });
           if (result.ok) {
             successCount++;
           } else {
