@@ -357,10 +357,24 @@ interface ApiOrder {
   status: string;
   customer_note?: string;
   admin_note?: string;
+  payment_method?: string;
+  payment_details?: string | null;
   items: ApiOrderItem[];
 }
 
+export interface PaymentDetails {
+  // Cheque
+  chequeBank?: string;
+  chequeNumber?: string;
+  chequeAccountNumber?: string;
+  chequeDueDate?: string; // Jalali "yyyy/mm/dd"
+  // Cash
+  cashMode?: 'delivery' | 'transfer';
+  transferReceiptNote?: string;
+}
+
 function mapOrder(o: ApiOrder, storeName: string, storeLogo: string, address: string): Order {
+  let paymentMethod = o.payment_method || 'اعتباری';
   return {
     id: String(o.id),
     orderNumber: `SB-${String(o.id).padStart(6, '0')}`,
@@ -378,7 +392,7 @@ function mapOrder(o: ApiOrder, storeName: string, storeLogo: string, address: st
       unitPrice: it.unit_price,
     })),
     deliveryAddress: address,
-    paymentMethod: 'اعتباری',
+    paymentMethod,
   };
 }
 
@@ -415,6 +429,8 @@ export async function apiCreateOrder(payload: {
   discount: number;
   finalAmount: number;
   customerNote?: string;
+  paymentMethod?: string;
+  paymentDetails?: PaymentDetails;
 }): Promise<{ orderId: number; orderNumber: string }> {
   return request('/api/orders', {
     method: 'POST',

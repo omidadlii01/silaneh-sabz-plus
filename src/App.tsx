@@ -16,6 +16,7 @@ import {
   saveSession,
   clearSession,
   Customer,
+  PaymentDetails,
 } from './api';
 import { assetUrl } from './utils/assets';
 import { usePushNotifications, unregisterDevicePush } from './hooks/usePushNotifications';
@@ -40,6 +41,8 @@ import { OrdersView } from './components/OrdersView';
 import { VisitorView } from './components/VisitorView';
 import { ProfileView } from './components/ProfileView';
 import { AuthView } from './components/AuthView';
+import { PaymentView } from './components/PaymentView';
+import { PaymentSuccessView } from './components/PaymentSuccessView';
 import { OfflineOverlay } from './components/OfflineOverlay';
 import { useOnlineStatus } from './hooks/useOnlineStatus';
 
@@ -174,6 +177,13 @@ export default function App() {
   const [selectedOfferSlide, setSelectedOfferSlide] = useState<OfferSlide | null>(null);
   const [isOfferModalOpen, setIsOfferModalOpen] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isPaymentOpen, setIsPaymentOpen] = useState(false);
+  const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
+  const [paymentSuccessInfo, setPaymentSuccessInfo] = useState<{
+    orderNumber: string;
+    totalAmount: number;
+    paymentMethodLabel: string;
+  } | null>(null);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isSearchOverlayOpen, setIsSearchOverlayOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(() => !loadSession());
@@ -327,8 +337,9 @@ export default function App() {
     }
   };
 
-  // Checkout Handler — submits the cart as a real order via /api/orders
-  const handleCheckout = () => {
+  // Opens the payment page instead of submitting immediately — the real
+  // order is only created once a payment method is confirmed there.
+  const handleOpenPayment = () => {
     if (!customer) {
       setIsCartOpen(false);
       setAuthMode('login');
@@ -336,33 +347,48 @@ export default function App() {
       showToast('برای ثبت سفارش ابتدا وارد حساب کاربری خود شوید.');
       return;
     }
+    setIsCartOpen(false);
+    setIsPaymentOpen(true);
+  };
+
+  // Called from PaymentView once the person picks a method and fills in
+  // whatever that method needs — this is what actually submits the order.
+  const handleConfirmPayment = (paymentMethodLabel: string, paymentDetails: PaymentDetails | undefined) => {
+    if (!customer || isSubmittingOrder) return;
 
     const items = cartItems.map((ci) => ({
       productId: ci.product.id,
       productName: ci.product.name,
       quantity: ci.quantity,
       unitPrice: ci.product.price,
-      totalPrice: ci.product.price * ci.quantity,
+      totalPrice: ci.product.price * ci.quantity * ci.product.cartonCount,
     }));
     const finalAmount = items.reduce((sum, it) => sum + it.totalPrice, 0);
 
+    setIsSubmittingOrder(true);
     apiCreateOrder({
       customerId: customer.id,
       items,
       initialAmount: finalAmount,
       discount: 0,
       finalAmount,
+      paymentMethod: paymentMethodLabel,
+      paymentDetails,
     })
       .then(({ orderNumber }) => {
         setCartItems([]);
-        setIsCartOpen(false);
-        setActiveTab('orders');
-        showToast(`فاکتور سفارش ${orderNumber} با موفقیت صادر و ثبت شد!`);
+        setIsPaymentOpen(false);
+        setPaymentSuccessInfo({
+          orderNumber,
+          totalAmount: finalAmount,
+          paymentMethodLabel,
+        });
         refreshOrders(customer);
       })
       .catch((err) => {
         showToast(err instanceof Error ? err.message : 'خطا در ثبت سفارش. دوباره تلاش کنید.');
-      });
+      })
+      .finally(() => setIsSubmittingOrder(false));
   };
 
   // Reorder from past orders — re-adds the same products using their
@@ -647,7 +673,7 @@ export default function App() {
           onUpdateQty={handleUpdateQty}
           onRemoveItem={handleRemoveItem}
           onClearCart={handleClearCart}
-          onCheckout={handleCheckout}
+          onCheckout={handleOpenPayment}
         />
 
         <NotificationsModal
@@ -675,6 +701,35 @@ export default function App() {
             initialMode={authMode}
             onLoginSuccess={handleLoginSuccess}
             onClose={() => setIsAuthOpen(false)}
+          />
+        )}
+
+        {isPaymentOpen && (
+          <PaymentView
+            cartItems={cartItems}
+            profile={userProfile}
+            onBack={() => {
+              setIsPaymentOpen(false);
+              setIsCartOpen(true);
+            }}
+            onConfirm={handleConfirmPayment}
+            isSubmitting={isSubmittingOrder}
+          />
+        )}
+
+        {paymentSuccessInfo && (
+          <PaymentSuccessView
+            orderNumber={paymentSuccessInfo.orderNumber}
+            totalAmount={paymentSuccessInfo.totalAmount}
+            paymentMethodLabel={paymentSuccessInfo.paymentMethodLabel}
+            onViewOrders={() => {
+              setPaymentSuccessInfo(null);
+              setActiveTab('orders');
+            }}
+            onBackToHome={() => {
+              setPaymentSuccessInfo(null);
+              setActiveTab('home');
+            }}
           />
         )}
       </div>

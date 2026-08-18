@@ -355,6 +355,8 @@ function marketerOrderToJson(o: any) {
     admin_note: o.admin_note,
     marketer_note: o.marketer_note,
     marketer_id: o.marketer_id,
+    payment_method: o.payment_method,
+    payment_details: o.payment_details,
     items: o.items || [],
   };
 }
@@ -580,7 +582,7 @@ export default {
       //     are optional and only used in the latter case) ---
       if (path === '/api/orders' && method === 'POST') {
         const body = await request.json<any>();
-        const { customerId, items, initialAmount, discount, finalAmount, customerNote, marketerNote } = body;
+        const { customerId, items, initialAmount, discount, finalAmount, customerNote, marketerNote, paymentMethod, paymentDetails } = body;
 
         if (!customerId || !items || !items.length) {
           return json({ error: 'اطلاعات سفارش ناقص است.' }, 400);
@@ -591,10 +593,20 @@ export default {
         const initialStatus = marketerNote !== undefined || body.marketerId ? 'تحویل‌شده' : 'ثبت‌شده';
 
         const orderResult = await env.DB.prepare(
-          `INSERT INTO orders (customer_id, initial_amount, discount, final_amount, status, customer_note, marketer_note)
-           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          `INSERT INTO orders (customer_id, initial_amount, discount, final_amount, status, customer_note, marketer_note, payment_method, payment_details)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         )
-          .bind(customerId, initialAmount, discount || 0, finalAmount, initialStatus, customerNote || '', marketerNote || null)
+          .bind(
+            customerId,
+            initialAmount,
+            discount || 0,
+            finalAmount,
+            initialStatus,
+            customerNote || '',
+            marketerNote || null,
+            paymentMethod || 'اعتباری',
+            paymentDetails ? JSON.stringify(paymentDetails) : null,
+          )
           .run();
 
         const orderId = orderResult.meta.last_row_id;
